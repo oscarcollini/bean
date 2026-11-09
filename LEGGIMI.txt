@@ -40,7 +40,7 @@ INTERFACCIA
 Aprendo un podcast si chiude quello aperto prima. Le puntate ascoltate
 sono in un riquadro a parte dentro il podcast. Avviando o riprendendo una puntata si apre la vista guida. Il lettore si
 riduce quando apri un podcast o cerchi. Tocca il titolo nella barra
-compatta per riaprire la vista guida, dove trovi anche Coda.
+compatta per riaprire la vista guida, dove trovi In corso e Coda.
 
 Nel lettore grande, il tasto ✓ archivia la puntata e avvia la prossima
 in coda. In In corso, ✓ archivia solo la puntata selezionata.

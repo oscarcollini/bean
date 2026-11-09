@@ -89,12 +89,15 @@ body:has(footer:not([hidden])) main { padding-bottom: calc(17rem + env(safe-area
 .episode-more .archive-action button { border: 0; background: transparent; font-size: .75rem; text-decoration: underline; padding-inline: .25rem; }
 .episode-actions > button { width: 2.65rem; padding-inline: 0; }
 
-#queue-home { margin-left: auto; }
-header #queue-home:not([hidden]) + #refresh { margin-left: 0; }
-#queue-dialog { width: min(32rem, calc(100% - 2rem)); max-height: 75dvh; padding: 1rem; border: 1px solid var(--line); border-radius: .9rem; background: var(--panel); color: var(--accent); }
-#queue-dialog::backdrop { background: #432c4c66; }
-#queue-dialog .heading { justify-content: space-between; }
-#queue-dialog h2 { margin: 0; }
+#resume-home, #queue-home { margin-left: auto; }
+header :is(#resume-home, #queue-home):not([hidden]) ~ button { margin-left: 0; }
+header button { padding-inline: .45rem; }
+.player-actions button { padding-inline: .45rem; }
+.player-actions { white-space: nowrap; }
+:is(#queue-dialog, #resume-dialog) { width: min(32rem, calc(100% - 2rem)); max-height: 75dvh; padding: 1rem; border: 1px solid var(--line); border-radius: .9rem; background: var(--panel); color: var(--accent); }
+:is(#queue-dialog, #resume-dialog)::backdrop { background: #432c4c66; }
+:is(#queue-dialog, #resume-dialog) .heading { justify-content: space-between; }
+:is(#queue-dialog, #resume-dialog) h2 { margin: 0; }
 
 #player { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: .35rem .55rem; align-items: center; }
 #player .playing { min-width: 0; border: 0; background: transparent; padding: 0; text-align: left; }
@@ -109,8 +112,6 @@ header #queue-home:not([hidden]) + #refresh { margin-left: 0; }
 #player.is-expanded .controls { width: 100%; }
 body:has(#player:not([hidden]):not(.is-expanded)) main { padding-bottom: calc(6rem + env(safe-area-inset-bottom)); }
 
-#resume-section { margin-top: 1rem; }
-#resume-section > summary { cursor: pointer; font-weight: 700; padding: .4rem 0; }
 #resume-list button, #finish-episode { min-width: 2.65rem; }
 .player-actions { display: flex; gap: .35rem; }
 #finish-episode { font-weight: 700; font-size: 1.2rem; }

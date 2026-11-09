@@ -317,8 +317,9 @@ function renderShortcuts() {
     .filter(entry => entry.position > 0 && !entry.listened &&
       followed.has(entry.feed) && episodeKey(entry) !== currentKey)
     .sort((a, b) => (b.touched || 0) - (a.touched || 0));
-  $('resume-section').hidden = !inProgress.length;
+  $('resume-home').hidden = !inProgress.length || !$('player').hidden;
   $('resume-list').replaceChildren();
+  if (!inProgress.length) empty($('resume-list'), 'Nessuna puntata da riprendere.');
   for (const episode of inProgress) {
     const item = row(episode.title, episode.show + ' · ' + clock(episode.position));
     button(item, '▶', () => selectEpisode(episode), 'Riprendi ' + episode.title);
@@ -518,8 +519,10 @@ function clock(seconds) {
 }
 
 function rememberPosition() {
-  if (!state.current || audio.readyState === 0) return;
-  lastSavedPosition = audio.currentTime;
+  if (!state.current) return;
+  const position = audio.currentTime;
+  if (!Number.isFinite(position) || (position === 0 && (audio.readyState === 0 || resumeAt > 0))) return;
+  lastSavedPosition = position;
   const key = episodeKey(state.current);
   if (state.listening[key]?.listened) return;
   state.current.position = lastSavedPosition;
@@ -540,7 +543,9 @@ function play() {
 }
 
 function selectEpisode(episode) {
-  if ($('queue-dialog').open) $('queue-dialog').close();
+  for (const id of ['queue-dialog', 'resume-dialog']) {
+    if ($(id).open) $(id).close();
+  }
   openEpisode(episode);
   setPlayerExpanded(true);
 }
@@ -622,6 +627,7 @@ $('player-view').onclick = () => {
   setPlayerExpanded(true);
   $('toggle').focus();
 };
+$('resume-home').onclick = $('resume-player').onclick = () => $('resume-dialog').showModal();
 $('queue-home').onclick = $('queue-player').onclick = () => $('queue-dialog').showModal();
 
 function finishCurrentEpisode() {

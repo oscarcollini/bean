@@ -7,8 +7,8 @@
 <link rel="manifest" href="bean.webmanifest">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-192.png">
-<link rel="stylesheet" href="style.css?v=17">
-<header><img src="icon.svg" alt=""><h1>Bean</h1><button id="queue-home" type="button" hidden>Coda</button><button id="refresh" type="button">Aggiorna</button></header>
+<link rel="stylesheet" href="style.css?v=18">
+<header><img src="icon.svg" alt=""><h1>Bean</h1><button id="resume-home" type="button" hidden>In corso</button><button id="queue-home" type="button" hidden>Coda</button><button id="refresh" type="button">Aggiorna</button></header>
 <main>
   <form id="search"><label class="sr" for="query">Cerca un podcast</label>
     <input id="query" type="search" placeholder="Cerca un podcast" required maxlength="120">
@@ -19,10 +19,13 @@
     <div class="heading"><h2>Risultati</h2><button id="close-results" type="button">Chiudi</button></div>
     <ul id="results"></ul>
   </section>
-  <details id="resume-section" open hidden><summary>In corso</summary><ul id="resume-list"></ul></details>
   <section><h2>Podcast seguiti</h2><ul id="following"></ul></section>
-  <p class="colophon">Bean v17 · Oscar Collini fecit · <a href="https://creativecommons.org/licenses/by-sa/4.0/deed.it" target="_blank" rel="noopener">CC BY-SA 4.0</a></p>
+  <p class="colophon">Bean v0.18 · Oscar Collini fecit · <a href="https://creativecommons.org/licenses/by-sa/4.0/deed.it" target="_blank" rel="noopener">CC BY-SA 4.0</a></p>
 </main>
+<dialog id="resume-dialog" aria-labelledby="resume-title">
+  <div class="heading"><h2 id="resume-title">In corso</h2><form method="dialog"><button>Chiudi</button></form></div>
+  <ul id="resume-list"></ul>
+</dialog>
 <dialog id="queue-dialog" aria-labelledby="queue-title">
   <div class="heading"><h2 id="queue-title">Coda</h2><form method="dialog"><button>Chiudi</button></form></div>
   <ul id="queue-list"></ul>
@@ -33,6 +36,7 @@
     <span class="playing-labels"><strong id="playing-title"></strong><small id="playing-show"></small></span>
   </button>
   <div class="player-actions">
+    <button id="resume-player" type="button">In corso</button>
     <button id="queue-player" type="button">Coda</button>
     <button id="finish-episode" type="button" aria-label="Segna come ascoltato e passa al prossimo episodio in coda">✓</button>
   </div>
@@ -51,5 +55,5 @@
   <small id="audio-error" role="status" hidden></small>
   <audio id="audio" preload="none"></audio>
 </footer>
-<script src="app.js?v=17" defer></script>
+<script src="app.js?v=18" defer></script>
 </html>
