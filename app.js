@@ -149,7 +149,6 @@ function parseFeed(bytes, baseUrl) {
     (standardImage && textOf(standardImage, 'url')) || textOf(channel, 'logo') || textOf(channel, 'icon'), baseUrl);
   const episodes = [...doc.getElementsByTagNameNS('*', '*')]
     .filter(item => ['item', 'entry'].includes(item.localName))
-    .slice(0, 150)
     .flatMap(item => {
       const enclosure = [...item.children].find(child =>
         child.localName === 'enclosure' ||
