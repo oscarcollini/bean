@@ -1,21 +1,14 @@
-BEAN — prima versione
+BEAN SU GITHUB PAGES
 
-Avvio sul computer
-1. Estrai lo ZIP.
-2. Apri un terminale nella cartella Bean ed esegui: python3 server.py
-3. Apri http://localhost:8000 in Chrome o Edge.
+Carica i file di questo ZIP nella stessa cartella di pubblicazione che
+contiene già index.html di Bean, sovrascrivendo quelli con lo stesso nome.
+Mantieni lo stesso indirizzo per conservare i podcast seguiti e la posizione.
 
-Su Android
-Bean va servito su un indirizzo HTTPS per installarlo dal menu di Chrome.
-Il server Python serve sia la pagina sia ricerca e feed. Per ospitarlo,
-usa un servizio che esegua Python, inoltri il traffico al server e fornisca HTTPS.
-Avvio nel servizio: python3 server.py --host 0.0.0.0 --port 8000
-Non è necessario un account in Bean. La ricerca usa il catalogo Apple Italia.
-La pagina si apre anche offline dopo la prima visita, mentre ricerca,
-aggiornamento e streaming richiedono Internet.
+Quando GitHub Pages ha pubblicato, chiudi le schede di Bean e riapri la
+pagina. Se compare ancora il vecchio errore al primo avvio, ricaricala
+ancora una volta per permettere al browser di attivare l'aggiornamento.
 
-Uso
-Cerca un podcast, premi Segui e poi Ascolta. Il lettore ha −10 s, +30 s
-e velocità da 0,75× a 2×. Bean ricorda l'ultima puntata e la posizione
-sul dispositivo. I feed si aggiornano all'apertura e ogni mezz'ora
-mentre Bean è in uso. Aggiorna forza il controllo.
+La ricerca usa il catalogo Apple Italia. Bean prova a leggere i feed dai
+rispettivi siti e, se il browser non può accedervi direttamente, usa il
+proxy pubblico CodeTabs. Il proxy riceve l'indirizzo pubblico del feed.
+L'audio è riprodotto dal sito del podcast.

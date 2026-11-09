@@ -30,21 +30,76 @@ function status(message = '') {
   $('status').hidden = !message;
 }
 
-async function api(route, params) {
-  const url = new URL('api/' + route, location.href);
-  url.search = new URLSearchParams(params);
-  const response = await fetch(url, { signal: AbortSignal.timeout(20000) });
-  const data = await response.json();
-  if (!response.ok) throw new Error(data.error);
-  return data;
+let searchSequence = 0;
+
+function searchPodcasts(term) {
+  return new Promise((resolve, reject) => {
+    const callback = 'beanCatalog' + ++searchSequence;
+    const script = document.createElement('script');
+    const url = new URL('https://itunes.apple.com/search');
+    url.search = new URLSearchParams({
+      term, country: 'IT', media: 'podcast', entity: 'podcast', limit: '25', callback
+    });
+    function finish(error, data) {
+      clearTimeout(timeout);
+      script.remove();
+      delete window[callback];
+      if (error) reject(error);
+      else resolve(data);
+    }
+    const timeout = setTimeout(() => finish(new Error('Catalogo non raggiungibile')), 12000);
+    window[callback] = data => {
+      if (!Array.isArray(data?.results)) {
+        finish(new Error('Risposta del catalogo non valida'));
+        return;
+      }
+      const matches = data.results
+        .filter(item => /^https?:\/\//i.test(item.feedUrl || ''))
+        .map(item => ({
+          title: item.collectionName || item.trackName || 'Podcast',
+          author: item.artistName || '',
+          feed: item.feedUrl
+        }));
+      finish(null, matches);
+    };
+    script.src = url.href;
+    script.onerror = () => finish(new Error('Catalogo non raggiungibile'));
+    document.head.append(script);
+  });
+}
+
+async function feedResponse(url) {
+  const response = await fetch(url, {
+    signal: AbortSignal.timeout(9000), credentials: 'omit', referrerPolicy: 'no-referrer'
+  });
+  if (!response.ok) throw new Error('Feed non raggiungibile');
+  return response;
+}
+
+async function readEpisodes(feed) {
+  const source = new URL(feed);
+  if (!['http:', 'https:'].includes(source.protocol) || source.username || source.password) {
+    throw new Error('Indirizzo del feed non valido');
+  }
+  if (source.protocol === 'https:') {
+    try {
+      const response = await feedResponse(source);
+      return parseFeed(new Uint8Array(await response.arrayBuffer()), response.url || source.href);
+    } catch {
+      // Many podcast hosts do not allow cross-origin requests from browsers.
+    }
+  }
+  const proxy = new URL('https://api.codetabs.com/v1/proxy');
+  proxy.searchParams.set('quest', source.href);
+  const response = await feedResponse(proxy);
+  return parseFeed(new Uint8Array(await response.arrayBuffer()), source.href);
 }
 
 function textOf(element, name) {
   return [...element.children].find(child => child.localName === name)?.textContent.trim() || '';
 }
 
-function parseFeed(data) {
-  const bytes = Uint8Array.from(atob(data.xml), character => character.charCodeAt(0));
+function parseFeed(bytes, baseUrl) {
   const prefix = new TextDecoder().decode(bytes.slice(0, 256));
   const encoding = prefix.match(/encoding\s*=\s*['"]([^'"]+)/i)?.[1];
   const utf16 = bytes[0] === 255 && bytes[1] === 254 ? 'utf-16le'
@@ -64,7 +119,7 @@ function parseFeed(data) {
       const source = enclosure?.getAttribute('url') || enclosure?.getAttribute('href');
       if (!source) return [];
       try {
-        const url = new URL(source, data.url);
+        const url = new URL(source, baseUrl);
         if (!['http:', 'https:'].includes(url.protocol)) return [];
         if (location.protocol === 'https:' && url.protocol === 'http:') url.protocol = 'https:';
         return [{
@@ -167,7 +222,7 @@ async function updateShows(manual = false, startup = false) {
   try {
     for (const show of shows) {
       try {
-        show.episodes = parseFeed(await api('feed', { url: show.feed }));
+        show.episodes = await readEpisodes(show.feed);
       } catch {
         failures++;
       }
@@ -195,7 +250,7 @@ $('search').addEventListener('submit', async event => {
   const results = $('results');
   results.replaceChildren();
   try {
-    const matches = await api('search', { q });
+    const matches = await searchPodcasts(q);
     if (!matches.length) empty(results, 'Nessun podcast trovato.');
     for (const match of matches) {
       const item = row(match.title, match.author);
@@ -205,7 +260,7 @@ $('search').addEventListener('submit', async event => {
         control.disabled = true;
         status('Carico le puntate…');
         try {
-          const episodes = parseFeed(await api('feed', { url: match.feed }));
+          const episodes = await readEpisodes(match.feed);
           state.shows.push({ ...match, episodes, checked: Date.now() });
           save();
           render();

@@ -1,15 +1,15 @@
-const CACHE = 'bean-shell-1';
-const SHELL = ['./', './index.html', './style.css', './app.js', './icon.svg',
+const CACHE = 'bean-shell-pages-2';
+const SHELL = ['./', './index.html', './style.css', './app.js?v=2', './icon.svg',
   './icon-192.png', './icon-512.png', './bean.webmanifest'];
 
 self.addEventListener('install', event => {
-  event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(SHELL)));
+  event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(SHELL)).then(() => self.skipWaiting()));
 });
 
 self.addEventListener('activate', event => {
   event.waitUntil(caches.keys().then(keys => Promise.all(keys
     .filter(key => key.startsWith('bean-shell-') && key !== CACHE)
-    .map(key => caches.delete(key)))));
+    .map(key => caches.delete(key)))).then(() => self.clients.claim()));
 });
 
 self.addEventListener('fetch', event => {
