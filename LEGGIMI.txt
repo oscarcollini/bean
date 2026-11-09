@@ -26,3 +26,11 @@ Le copertine arrivano dal catalogo o dal feed. Riprendi mostra le puntate
 interrotte. In Altro trovi Archivia fino a qui e In coda. La freccia su
 sposta una puntata in testa alla coda. Quando una puntata finisce, Bean
 avvia la prima in coda.
+
+LETTORE E NUOVE PUNTATE
+
+Il lettore usa comandi grandi e mostra il triangolo o le due barre di
+pausa. Il contatore accanto al podcast segnala le puntate comparse durante
+gli aggiornamenti, anche se la sua scheda è chiusa. Si azzera man mano
+che le avvii o le segni come ascoltate. Bean controlla all'apertura e
+non invia notifiche quando la PWA è chiusa.

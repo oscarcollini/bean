@@ -4,13 +4,14 @@
   --pea: #bef15e;
   --green: #23452d;
   --ink: #182e20;
-  --line: #6c923c;
+  --line: #8ca47e;
   --muted: #3d562d;
-  --panel: #dcf7a8;
+  --panel: #e0ebd7;
+  --surface: #eef3e7;
 }
 * { box-sizing: border-box; }
 [hidden] { display: none !important; }
-body { margin: 0 auto; max-width: 44rem; background: var(--pea); color: var(--ink); }
+body { margin: 0 auto; max-width: 44rem; background: var(--surface); color: var(--ink); }
 header, main { padding: 0 1rem; }
 header, .heading, li, form, .timeline, .controls { display: flex; align-items: center; gap: .55rem; }
 header { min-height: 4.8rem; }
@@ -36,10 +37,17 @@ footer button, footer select { background: var(--panel); border-color: var(--pan
 footer #toggle { background: var(--pea); color: var(--green); border-color: var(--pea); }
 footer input[type=range] { accent-color: var(--pea); }
 footer :focus-visible { outline-color: var(--pea); }
-.timeline { font-size: .8rem; margin: .35rem 0; }
-.controls { justify-content: center; }
-#toggle { min-width: 4.8rem; }
-body:has(footer:not([hidden])) main { padding-bottom: var(--player-height, 11rem); }
+.timeline { font-size: .95rem; margin: .4rem 0; font-variant-numeric: tabular-nums; }
+.timeline input { height: 2rem; }
+.controls { display: grid; grid-template-columns: 1fr 1.15fr 1fr auto; gap: .4rem; }
+.controls button, .controls select { min-width: 0; min-height: 4rem; padding-inline: .35rem; font-size: 1.05rem; font-weight: 650; }
+#toggle { display: grid; place-items: center; }
+#toggle svg { width: 2rem; height: 2rem; fill: currentColor; }
+#toggle .pause-icon, #toggle.is-playing .play-icon { display: none; }
+#toggle.is-playing .pause-icon { display: inline; }
+#playing-cover { width: 3.25rem; height: 3.25rem; }
+#playing-title { font-size: 1.1rem; }
+body:has(footer:not([hidden])) main { padding-bottom: calc(13rem + env(safe-area-inset-bottom)); }
 :focus-visible { outline: 2px solid var(--green); outline-offset: 2px; }
 .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 
@@ -60,3 +68,5 @@ body:has(footer:not([hidden])) main { padding-bottom: var(--player-height, 11rem
 .episode-more[open] { flex-basis: 100%; }
 .episode-more button { margin-right: .35rem; }
 #queue-list button { padding-inline: .55rem; }
+
+.new-count { display: inline-block; margin-left: .5rem; padding: .15rem .45rem; border-radius: .45rem; background: var(--pea); color: var(--green); font-size: .8rem; }

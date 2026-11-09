@@ -207,6 +207,28 @@ function episodeKey({ feed, id }) {
   return JSON.stringify([feed, id]);
 }
 
+function clearNewEpisode(episode) {
+  const show = state.shows.find(show => show.feed === episode.feed);
+  if (!show?.newIds?.includes(episode.id)) return false;
+  show.newIds = show.newIds.filter(id => id !== episode.id);
+  return true;
+}
+
+function updateFeed(show, feed) {
+  const previousIds = new Set(show.episodes.map(episode => episode.id));
+  const latestDate = Math.max(0, ...show.episodes.map(episode => episode.date));
+  const newIds = new Set(show.newIds || []);
+  for (const episode of feed.episodes) {
+    if (!previousIds.has(episode.id) && episode.date >= latestDate &&
+        !state.listening[episodeKey({ ...episode, feed: show.feed })]) {
+      newIds.add(episode.id);
+    }
+  }
+  show.episodes = feed.episodes;
+  show.newIds = feed.episodes.filter(episode => newIds.has(episode.id)).map(episode => episode.id);
+  show.artwork ||= feed.artwork;
+}
+
 function setListened(episode, listened) {
   const key = episodeKey(episode);
   const { position = 0 } = state.listening[key] || {};
@@ -214,7 +236,10 @@ function setListened(episode, listened) {
   if (state.current && episodeKey(state.current) === key && listened) {
     state.current.position = 0;
   }
-  if (listened) state.queue = state.queue.filter(entry => episodeKey(entry) !== key);
+  if (listened) {
+    clearNewEpisode(episode);
+    state.queue = state.queue.filter(entry => episodeKey(entry) !== key);
+  }
 }
 
 function markListened(episode, listened) {
@@ -235,7 +260,8 @@ function episodeRow(episode, older = []) {
   const entry = state.listening[episodeKey(episode)];
   const date = episode.date ? new Date(episode.date).toLocaleDateString('it-IT') : '';
   const progress = !entry?.listened && entry?.position >= 1 ? 'A ' + clock(entry.position) : '';
-  const item = row(episode.title, [date, progress].filter(Boolean).join(' · '));
+  const isNew = state.shows.find(show => show.feed === episode.feed)?.newIds?.includes(episode.id);
+  const item = row(episode.title, [isNew ? 'Nuova' : '', date, progress].filter(Boolean).join(' · '));
   item.className = 'episode';
   const actions = document.createElement('div');
   actions.className = 'episode-actions';
@@ -331,6 +357,12 @@ function render() {
     const podcast = details(show.title, savedPanel?.open ?? state.shows.length === 1);
     podcast.dataset.feed = show.feed;
     podcast.firstChild.prepend(cover(show.artwork));
+    if (show.newIds?.length) {
+      const badge = document.createElement('span');
+      badge.className = 'new-count';
+      badge.textContent = show.newIds.length === 1 ? '1 nuova' : show.newIds.length + ' nuove';
+      podcast.firstChild.append(badge);
+    }
     const header = document.createElement('div');
     header.className = 'podcast-header';
     const author = document.createElement('small');
@@ -392,8 +424,7 @@ async function updateShows(manual = false, startup = false) {
     for (const show of shows) {
       try {
         const feed = await readEpisodes(show.feed);
-        show.episodes = feed.episodes;
-        show.artwork ||= feed.artwork;
+        updateFeed(show, feed);
         if (state.current?.feed === show.feed) updatePlayerCover();
       } catch {
         failures++;
@@ -584,12 +615,16 @@ audio.addEventListener('timeupdate', () => {
 for (const event of ['play', 'pause', 'ended']) {
   audio.addEventListener(event, () => {
     $('toggle').setAttribute('aria-label', audio.paused ? 'Riproduci' : 'Pausa');
+    $('toggle').classList.toggle('is-playing', !audio.paused);
     if ('mediaSession' in navigator) navigator.mediaSession.playbackState = audio.paused ? 'paused' : 'playing';
     if (event === 'play' && state.current) {
+      const cleared = clearNewEpisode(state.current);
       const key = episodeKey(state.current);
       const queued = state.queue.findIndex(entry => episodeKey(entry) === key);
       if (queued >= 0) {
         state.queue.splice(queued, 1);
+      }
+      if (cleared || queued >= 0) {
         save();
         render();
       }
