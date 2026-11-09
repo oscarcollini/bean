@@ -12,7 +12,11 @@ try {
   // An unreadable library starts empty.
 }
 
-let filter = null;
+state.listening ??= {};
+state.queue ??= [];
+if (state.current?.position > 0) {
+  state.listening[episodeKey(state.current)] ??= state.current;
+}
 let refreshing = false;
 let resumeAt = 0;
 let lastSavedPosition = 0;
@@ -58,6 +62,7 @@ function searchPodcasts(term) {
         .map(item => ({
           title: item.collectionName || item.trackName || 'Podcast',
           author: item.artistName || '',
+          artwork: artworkUrl(item.artworkUrl600 || item.artworkUrl100),
           feed: item.feedUrl
         }));
       finish(null, matches);
@@ -99,6 +104,33 @@ function textOf(element, name) {
   return [...element.children].find(child => child.localName === name)?.textContent.trim() || '';
 }
 
+function artworkUrl(source, baseUrl) {
+  if (!source) return '';
+  try {
+    const url = new URL(source, baseUrl);
+    if (url.protocol === 'http:') url.protocol = 'https:';
+    return url.protocol === 'https:' && !url.username && !url.password ? url.href : '';
+  } catch {
+    return '';
+  }
+}
+
+function cover(source, lazy = true) {
+  const img = document.createElement('img');
+  img.className = 'cover';
+  img.alt = '';
+  img.loading = lazy ? 'lazy' : 'eager';
+  setCover(img, source);
+  return img;
+}
+
+function setCover(img, source) {
+  const fallback = new URL('icon.svg', location.href).href;
+  img.onerror = () => { if (img.src !== fallback) img.src = fallback; };
+  img.referrerPolicy = 'no-referrer';
+  img.src = artworkUrl(source) || fallback;
+}
+
 function parseFeed(bytes, baseUrl) {
   const prefix = new TextDecoder().decode(bytes.slice(0, 256));
   const encoding = prefix.match(/encoding\s*=\s*['"]([^'"]+)/i)?.[1];
@@ -109,7 +141,13 @@ function parseFeed(bytes, baseUrl) {
   if (doc.querySelector('parsererror') || !['rss', 'feed', 'RDF'].includes(doc.documentElement.localName)) {
     throw new Error('Feed non valido');
   }
-  return [...doc.getElementsByTagNameNS('*', '*')]
+  const root = doc.documentElement;
+  const channel = [...root.children].find(child => child.localName === 'channel') || root;
+  const image = [...channel.children].find(child => child.localName === 'image' && child.hasAttribute('href'));
+  const standardImage = [...channel.children].find(child => child.localName === 'image' && !child.namespaceURI);
+  const artwork = artworkUrl(image?.getAttribute('href') ||
+    (standardImage && textOf(standardImage, 'url')) || textOf(channel, 'logo') || textOf(channel, 'icon'), baseUrl);
+  const episodes = [...doc.getElementsByTagNameNS('*', '*')]
     .filter(item => ['item', 'entry'].includes(item.localName))
     .slice(0, 150)
     .flatMap(item => {
@@ -134,6 +172,7 @@ function parseFeed(bytes, baseUrl) {
     })
     .sort((a, b) => b.date - a.date)
     .slice(0, 30);
+  return { episodes, artwork };
 }
 
 function row(title, subtitle) {
@@ -164,47 +203,177 @@ function empty(list, message) {
   list.append(item);
 }
 
+function episodeKey({ feed, id }) {
+  return JSON.stringify([feed, id]);
+}
+
+function setListened(episode, listened) {
+  const key = episodeKey(episode);
+  const { position = 0 } = state.listening[key] || {};
+  state.listening[key] = { ...episode, listened, position: listened ? 0 : position };
+  if (state.current && episodeKey(state.current) === key && listened) {
+    state.current.position = 0;
+  }
+  if (listened) state.queue = state.queue.filter(entry => episodeKey(entry) !== key);
+}
+
+function markListened(episode, listened) {
+  setListened(episode, listened);
+  save();
+  render();
+}
+
+function addToQueue(episode) {
+  if (!state.queue.some(entry => episodeKey(entry) === episodeKey(episode))) {
+    state.queue.push(episode);
+    save();
+    render();
+  }
+}
+
+function episodeRow(episode, older = []) {
+  const entry = state.listening[episodeKey(episode)];
+  const date = episode.date ? new Date(episode.date).toLocaleDateString('it-IT') : '';
+  const progress = !entry?.listened && entry?.position >= 1 ? 'A ' + clock(entry.position) : '';
+  const item = row(episode.title, [date, progress].filter(Boolean).join(' · '));
+  item.className = 'episode';
+  const actions = document.createElement('div');
+  actions.className = 'episode-actions';
+  const playLabel = entry?.listened ? 'Riascolta' : progress ? 'Riprendi' : 'Ascolta';
+  button(actions, playLabel, () => openEpisode(episode), playLabel + ' ' + episode.title);
+  const markLabel = entry?.listened ? 'Da ascoltare' : 'Già ascoltato';
+  button(actions, markLabel, () => markListened(episode, !entry?.listened),
+    markLabel + ' · ' + episode.title);
+  const more = details('Altro', false);
+  more.className = 'episode-more';
+  if (!entry?.listened) {
+    const queued = state.queue.some(candidate => episodeKey(candidate) === episodeKey(episode));
+    button(more, queued ? 'Togli dalla coda' : 'In coda', () => {
+      if (!queued) {
+        addToQueue(episode);
+        return;
+      }
+      state.queue = state.queue.filter(candidate => episodeKey(candidate) !== episodeKey(episode));
+      save();
+      render();
+    });
+    if (older.length) {
+      button(more, 'Archivia fino a qui', () => {
+        const batch = [episode, ...older];
+        if (!confirm('Archiviare ' + batch.length + ' puntate di ' + episode.show + '?')) return;
+        batch.forEach(candidate => setListened(candidate, true));
+        save();
+        render();
+      });
+    }
+    actions.append(more);
+  }
+  item.append(actions);
+  return item;
+}
+
+function details(label, open) {
+  const panel = document.createElement('details');
+  const summary = document.createElement('summary');
+  summary.textContent = label;
+  panel.open = open;
+  panel.append(summary);
+  return panel;
+}
+
+function renderShortcuts() {
+  const followed = new Set(state.shows.map(show => show.feed));
+  const inProgress = Object.values(state.listening)
+    .filter(episode => episode.position >= 1 && !episode.listened && followed.has(episode.feed))
+    .sort((a, b) => (b.touched || 0) - (a.touched || 0));
+  $('resume-section').hidden = !inProgress.length;
+  $('resume-list').replaceChildren();
+  for (const episode of inProgress) {
+    const item = row(episode.title, episode.show + ' · ' + clock(episode.position));
+    button(item, 'Riprendi', () => openEpisode(episode), 'Riprendi ' + episode.title);
+    $('resume-list').append(item);
+  }
+  $('queue-section').hidden = !state.queue.length;
+  $('queue-list').replaceChildren();
+  state.queue.forEach((episode, index) => {
+    const item = row(episode.title, episode.show);
+    button(item, 'Play', () => openEpisode(episode), 'Ascolta ' + episode.title);
+    if (index > 0) button(item, '↑', () => {
+      state.queue.unshift(...state.queue.splice(index, 1));
+      save();
+      render();
+    }, 'Metti per prima ' + episode.title);
+    button(item, '×', () => {
+      state.queue.splice(index, 1);
+      save();
+      render();
+    }, 'Togli dalla coda ' + episode.title);
+    $('queue-list').append(item);
+  });
+}
+
 function render() {
+  renderShortcuts();
   const following = $('following');
-  const episodes = $('episodes');
+  const oldPanels = new Map([...following.querySelectorAll('details[data-feed]')]
+    .map(panel => [panel.dataset.feed, { open: panel.open, archive: panel.querySelector('.archive')?.open }]));
   following.replaceChildren();
-  episodes.replaceChildren();
-  const selected = state.shows.find(show => show.feed === filter);
-  $('episode-heading').textContent = selected?.title || 'Ultime puntate';
-  $('all').hidden = !selected;
 
   if (!state.shows.length) {
     empty(following, 'Cerca un podcast e premi Segui.');
-    empty(episodes, 'Le nuove puntate dei tuoi podcast compariranno qui.');
     return;
   }
 
   for (const show of state.shows) {
-    const item = row(show.title, show.author);
-    button(item, 'Puntate', () => {
-      filter = show.feed;
-      render();
-      $('episode-heading').scrollIntoView({ block: 'start' });
-    }, 'Puntate di ' + show.title);
-    button(item, '×', () => {
+    const item = document.createElement('li');
+    item.className = 'podcast';
+    const savedPanel = oldPanels.get(show.feed);
+    const podcast = details(show.title, savedPanel?.open ?? state.shows.length === 1);
+    podcast.dataset.feed = show.feed;
+    podcast.firstChild.prepend(cover(show.artwork));
+    const header = document.createElement('div');
+    header.className = 'podcast-header';
+    const author = document.createElement('small');
+    author.textContent = show.author;
+    header.append(author);
+    button(header, 'Smetti di seguire', () => {
       state.shows = state.shows.filter(candidate => candidate !== show);
-      if (filter === show.feed) filter = null;
+      state.queue = state.queue.filter(episode => episode.feed !== show.feed);
       save();
       render();
     }, 'Smetti di seguire ' + show.title);
-    following.append(item);
-  }
+    podcast.append(header);
 
-  const combined = (selected ? [selected] : state.shows)
-    .flatMap(show => show.episodes.map(episode => ({ ...episode, show: show.title, feed: show.feed })))
-    .sort((a, b) => b.date - a.date)
-    .slice(0, 60);
-  if (!combined.length) empty(episodes, 'Nessuna puntata disponibile.');
-  for (const episode of combined) {
-    const date = episode.date ? new Date(episode.date).toLocaleDateString('it-IT') : '';
-    const item = row(episode.title, [episode.show, date].filter(Boolean).join(' · '));
-    button(item, 'Ascolta', () => openEpisode(episode), 'Ascolta ' + episode.title);
-    episodes.append(item);
+    const episodes = new Map();
+    for (const entry of Object.values(state.listening)) {
+      if (entry.feed === show.feed) {
+        episodes.set(entry.id, entry);
+      }
+    }
+    for (const episode of show.episodes) {
+      episodes.set(episode.id, { ...episode, show: show.title, feed: show.feed });
+    }
+    const pending = document.createElement('ul');
+    const listened = document.createElement('ul');
+    const ordered = [...episodes.values()].sort((a, b) => b.date - a.date);
+    const remaining = ordered.filter(episode => !state.listening[episodeKey(episode)]?.listened);
+    const archived = ordered.filter(episode => state.listening[episodeKey(episode)]?.listened);
+    remaining.forEach((episode, index) => {
+      const older = episode.date ? remaining.slice(index + 1)
+        .filter(candidate => candidate.date > 0 && candidate.date <= episode.date) : [];
+      pending.append(episodeRow(episode, older));
+    });
+    archived.forEach(episode => listened.append(episodeRow(episode)));
+    if (!pending.children.length) empty(pending, 'Nessuna puntata da ascoltare.');
+    podcast.append(pending);
+    if (listened.children.length) {
+      const archive = details('Archivio (' + listened.children.length + ')', savedPanel?.archive ?? false);
+      archive.className = 'archive';
+      archive.append(listened);
+      podcast.append(archive);
+    }
+    item.append(podcast);
+    following.append(item);
   }
 }
 
@@ -222,7 +391,10 @@ async function updateShows(manual = false, startup = false) {
   try {
     for (const show of shows) {
       try {
-        show.episodes = await readEpisodes(show.feed);
+        const feed = await readEpisodes(show.feed);
+        show.episodes = feed.episodes;
+        show.artwork ||= feed.artwork;
+        if (state.current?.feed === show.feed) updatePlayerCover();
       } catch {
         failures++;
       }
@@ -254,14 +426,16 @@ $('search').addEventListener('submit', async event => {
     if (!matches.length) empty(results, 'Nessun podcast trovato.');
     for (const match of matches) {
       const item = row(match.title, match.author);
+      item.prepend(cover(match.artwork));
       const followed = state.shows.some(show => show.feed === match.feed);
       button(item, followed ? 'Seguito' : 'Segui', async control => {
         if (state.shows.some(show => show.feed === match.feed)) return;
         control.disabled = true;
         status('Carico le puntate…');
         try {
-          const episodes = await readEpisodes(match.feed);
-          state.shows.push({ ...match, episodes, checked: Date.now() });
+          const feed = await readEpisodes(match.feed);
+          state.shows.push({ ...match, episodes: feed.episodes,
+            artwork: match.artwork || feed.artwork, checked: Date.now() });
           save();
           render();
           control.textContent = 'Seguito';
@@ -285,7 +459,6 @@ $('search').addEventListener('submit', async event => {
 
 $('close-results').onclick = () => { $('results-section').hidden = true; };
 $('refresh').onclick = () => updateShows(true);
-$('all').onclick = () => { filter = null; render(); };
 
 function clock(seconds) {
   const total = Math.max(0, Math.floor(seconds || 0));
@@ -298,7 +471,10 @@ function clock(seconds) {
 function rememberPosition() {
   if (!state.current || audio.readyState === 0) return;
   lastSavedPosition = audio.currentTime;
+  const key = episodeKey(state.current);
+  if (state.listening[key]?.listened) return;
   state.current.position = lastSavedPosition;
+  state.listening[key] = { ...state.current, touched: Date.now() };
   save();
 }
 
@@ -317,11 +493,16 @@ function play() {
 function openEpisode(episode, autoplay = true) {
   const same = state.current?.feed === episode.feed && state.current?.id === episode.id;
   if (same && audio.hasAttribute('src')) {
-    if (autoplay) play();
+    if (autoplay) {
+      if (state.listening[episodeKey(episode)]?.listened) seek(0);
+      play();
+    }
     return;
   }
 
-  resumeAt = same ? state.current.position || 0 : 0;
+  rememberPosition();
+  const saved = state.listening[episodeKey(episode)];
+  resumeAt = saved?.listened ? 0 : saved?.position ?? (same ? state.current.position || 0 : 0);
   lastSavedPosition = resumeAt;
   state.current = { ...episode, position: resumeAt };
   save();
@@ -332,14 +513,23 @@ function openEpisode(episode, autoplay = true) {
   audio.src = episode.url;
   audio.playbackRate = Number($('rate').value);
   updateTimeline();
+  updatePlayerCover();
+  if (autoplay) play();
+}
+
+function updatePlayerCover() {
+  const episode = state.current;
+  if (!episode) return;
+  const artwork = state.shows.find(show => show.feed === episode.feed)?.artwork;
+  setCover($('playing-cover'), artwork);
   if ('mediaSession' in navigator && 'MediaMetadata' in window) {
     navigator.mediaSession.metadata = new MediaMetadata({
       title: episode.title,
       artist: episode.show,
-      artwork: [{ src: new URL('icon-512.png', location.href).href, sizes: '512x512', type: 'image/png' }]
+      artwork: artwork ? [{ src: artwork }] :
+        [{ src: new URL('icon-512.png', location.href).href, sizes: '512x512', type: 'image/png' }]
     });
   }
-  if (autoplay) play();
 }
 
 function seek(position) {
@@ -393,9 +583,25 @@ audio.addEventListener('timeupdate', () => {
 });
 for (const event of ['play', 'pause', 'ended']) {
   audio.addEventListener(event, () => {
-    $('toggle').textContent = audio.paused ? 'Play' : 'Pausa';
+    $('toggle').setAttribute('aria-label', audio.paused ? 'Riproduci' : 'Pausa');
     if ('mediaSession' in navigator) navigator.mediaSession.playbackState = audio.paused ? 'paused' : 'playing';
-    if (event !== 'play') rememberPosition();
+    if (event === 'play' && state.current) {
+      const key = episodeKey(state.current);
+      const queued = state.queue.findIndex(entry => episodeKey(entry) === key);
+      if (queued >= 0) {
+        state.queue.splice(queued, 1);
+        save();
+        render();
+      }
+    }
+    if (event === 'ended' && state.current) {
+      markListened(state.current, true);
+      if (state.queue.length) openEpisode(state.queue[0]);
+    }
+    if (event === 'pause') {
+      rememberPosition();
+      render();
+    }
   });
 }
 audio.addEventListener('error', () => showAudioError('Audio non disponibile per questa puntata.'));

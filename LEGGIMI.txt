@@ -12,3 +12,17 @@ La ricerca usa il catalogo Apple Italia. Bean prova a leggere i feed dai
 rispettivi siti e, se il browser non può accedervi direttamente, usa il
 proxy pubblico CodeTabs. Il proxy riceve l'indirizzo pubblico del feed.
 L'audio è riprodotto dal sito del podcast.
+
+PUNTATE E ARCHIVIO
+
+Tocca il nome di un podcast per aprirne le puntate. Quelle arrivate alla
+fine passano in Archivio. Già ascoltato fa lo stesso manualmente.
+Da ascoltare riporta una puntata nell'elenco principale. Bean salva sul
+dispositivo lo stato e il punto raggiunto nelle singole puntate.
+
+COPERTINE, RIPRENDI E CODA
+
+Le copertine arrivano dal catalogo o dal feed. Riprendi mostra le puntate
+interrotte. In Altro trovi Archivia fino a qui e In coda. La freccia su
+sposta una puntata in testa alla coda. Quando una puntata finisce, Bean
+avvia la prima in coda.
