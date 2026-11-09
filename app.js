@@ -265,7 +265,7 @@ function episodeRow(episode, older = []) {
   const actions = document.createElement('div');
   actions.className = 'episode-actions';
   const playLabel = entry?.listened ? 'Riascolta' : progress ? 'Riprendi' : 'Ascolta';
-  button(actions, '▶', () => openEpisode(episode), playLabel + ' ' + episode.title);
+  button(actions, '▶', () => selectEpisode(episode), playLabel + ' ' + episode.title);
   const markLabel = entry?.listened ? 'Da ascoltare' : 'Già ascoltato';
   const more = details('⋯', false);
   more.firstChild.setAttribute('aria-label', 'Altre azioni · ' + episode.title);
@@ -312,14 +312,17 @@ function details(label, open) {
 
 function renderShortcuts() {
   const followed = new Set(state.shows.map(show => show.feed));
+  const currentKey = state.current ? episodeKey(state.current) : null;
   const inProgress = Object.values(state.listening)
-    .filter(episode => episode.position >= 1 && !episode.listened && followed.has(episode.feed))
+    .filter(entry => entry.position > 0 && !entry.listened &&
+      followed.has(entry.feed) && episodeKey(entry) !== currentKey)
     .sort((a, b) => (b.touched || 0) - (a.touched || 0));
   $('resume-section').hidden = !inProgress.length;
   $('resume-list').replaceChildren();
-  for (const episode of inProgress.slice(0, 1)) {
+  for (const episode of inProgress) {
     const item = row(episode.title, episode.show + ' · ' + clock(episode.position));
-    button(item, 'Riprendi', () => openEpisode(episode), 'Riprendi ' + episode.title);
+    button(item, '▶', () => selectEpisode(episode), 'Riprendi ' + episode.title);
+    button(item, '✓', () => markListened(episode, true), 'Segna come ascoltato · ' + episode.title);
     $('resume-list').append(item);
   }
   $('queue-home').hidden = !state.queue.length || !$('player').hidden;
@@ -327,7 +330,7 @@ function renderShortcuts() {
   if (!state.queue.length) empty($('queue-list'), 'La coda è vuota.');
   state.queue.forEach((episode, index) => {
     const item = row(episode.title, episode.show);
-    button(item, 'Play', () => openEpisode(episode), 'Ascolta ' + episode.title);
+    button(item, 'Play', () => selectEpisode(episode), 'Ascolta ' + episode.title);
     if (index > 0) button(item, '↑', () => {
       state.queue.unshift(...state.queue.splice(index, 1));
       save();
@@ -373,6 +376,9 @@ function render() {
       thumbnail.append(dot, label);
     }
     podcast.firstChild.prepend(thumbnail);
+    podcast.firstChild.addEventListener('click', () => {
+      if (!podcast.open) setPlayerExpanded(false);
+    });
     const header = document.createElement('div');
     header.className = 'podcast-header';
     const author = document.createElement('small');
@@ -452,8 +458,10 @@ async function updateShows(manual = false, startup = false) {
   }
 }
 
+$('query').addEventListener('focus', () => setPlayerExpanded(false));
 $('search').addEventListener('submit', async event => {
   event.preventDefault();
+  setPlayerExpanded(false);
   const q = $('query').value.trim();
   if (!q) return;
   const submit = $('search').querySelector('button');
@@ -531,6 +539,12 @@ function play() {
   });
 }
 
+function selectEpisode(episode) {
+  if ($('queue-dialog').open) $('queue-dialog').close();
+  openEpisode(episode);
+  setPlayerExpanded(true);
+}
+
 function openEpisode(episode, autoplay = true) {
   const same = state.current?.feed === episode.feed && state.current?.id === episode.id;
   if (same && audio.hasAttribute('src')) {
@@ -548,7 +562,7 @@ function openEpisode(episode, autoplay = true) {
   state.current = { ...episode, position: resumeAt };
   save();
   $('player').hidden = false;
-  $('queue-home').hidden = true;
+  renderShortcuts();
   $('playing-title').textContent = episode.title;
   $('playing-show').textContent = episode.show;
   showAudioError();
@@ -598,12 +612,40 @@ function updateTimeline() {
   }
 }
 
-$('player-view').onclick = () => {
-  const expanded = $('player').classList.toggle('is-expanded');
+function setPlayerExpanded(expanded) {
+  $('player').classList.toggle('is-expanded', expanded);
   $('player-view').setAttribute('aria-expanded', String(expanded));
-  $('player-view').setAttribute('aria-label', expanded ? 'Comprimi lettore' : 'Apri vista guida');
+  $('player-view').disabled = expanded;
+}
+
+$('player-view').onclick = () => {
+  setPlayerExpanded(true);
+  $('toggle').focus();
 };
 $('queue-home').onclick = $('queue-player').onclick = () => $('queue-dialog').showModal();
+
+function finishCurrentEpisode() {
+  if (!state.current) return;
+  setListened(state.current, true);
+  if (state.queue.length) {
+    openEpisode(state.queue[0]);
+  } else {
+    audio.pause();
+    state.current = null;
+    audio.removeAttribute('src');
+    audio.load();
+    $('player').hidden = true;
+    setPlayerExpanded(false);
+    if ('mediaSession' in navigator) {
+      navigator.mediaSession.metadata = null;
+      navigator.mediaSession.playbackState = 'none';
+    }
+    save();
+  }
+  render();
+}
+
+$('finish-episode').onclick = finishCurrentEpisode;
 
 $('toggle').onclick = () => { if (audio.paused) play(); else audio.pause(); };
 $('back').onclick = () => seek(audio.currentTime - 10);
@@ -634,7 +676,7 @@ for (const event of ['play', 'pause', 'ended']) {
   audio.addEventListener(event, () => {
     $('toggle').setAttribute('aria-label', audio.paused ? 'Riproduci' : 'Pausa');
     $('toggle').classList.toggle('is-playing', !audio.paused);
-    if ('mediaSession' in navigator) navigator.mediaSession.playbackState = audio.paused ? 'paused' : 'playing';
+    if ('mediaSession' in navigator) navigator.mediaSession.playbackState = state.current ? (audio.paused ? 'paused' : 'playing') : 'none';
     if (event === 'play' && state.current) {
       const cleared = clearNewEpisode(state.current);
       const key = episodeKey(state.current);

@@ -7,7 +7,7 @@
 <link rel="manifest" href="bean.webmanifest">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-192.png">
-<link rel="stylesheet" href="style.css?v=14">
+<link rel="stylesheet" href="style.css?v=17">
 <header><img src="icon.svg" alt=""><h1>Bean</h1><button id="queue-home" type="button" hidden>Coda</button><button id="refresh" type="button">Aggiorna</button></header>
 <main>
   <form id="search"><label class="sr" for="query">Cerca un podcast</label>
@@ -19,9 +19,9 @@
     <div class="heading"><h2>Risultati</h2><button id="close-results" type="button">Chiudi</button></div>
     <ul id="results"></ul>
   </section>
-  <section id="resume-section" aria-label="Riprendi" hidden><ul id="resume-list"></ul></section>
+  <details id="resume-section" open hidden><summary>In corso</summary><ul id="resume-list"></ul></details>
   <section><h2>Podcast seguiti</h2><ul id="following"></ul></section>
-  <p class="colophon">Bean v14 · Oscar Collini fecit · <a href="https://creativecommons.org/licenses/by-sa/4.0/deed.it" target="_blank" rel="noopener">CC BY-SA 4.0</a></p>
+  <p class="colophon">Bean v17 · Oscar Collini fecit · <a href="https://creativecommons.org/licenses/by-sa/4.0/deed.it" target="_blank" rel="noopener">CC BY-SA 4.0</a></p>
 </main>
 <dialog id="queue-dialog" aria-labelledby="queue-title">
   <div class="heading"><h2 id="queue-title">Coda</h2><form method="dialog"><button>Chiudi</button></form></div>
@@ -31,9 +31,11 @@
   <button class="playing" id="player-view" type="button" aria-expanded="false" aria-controls="controls" aria-label="Apri vista guida">
     <img id="playing-cover" class="cover" alt="">
     <span class="playing-labels"><strong id="playing-title"></strong><small id="playing-show"></small></span>
-    <span class="view-chevron" aria-hidden="true">⌃</span>
   </button>
-  <button id="queue-player" type="button">Coda</button>
+  <div class="player-actions">
+    <button id="queue-player" type="button">Coda</button>
+    <button id="finish-episode" type="button" aria-label="Segna come ascoltato e passa al prossimo episodio in coda">✓</button>
+  </div>
   <div class="timeline"><span id="elapsed">0:00</span><input id="position" type="range" min="0" max="1" step="1" value="0" aria-label="Posizione di riproduzione" disabled><span id="duration">–:––</span></div>
   <div class="controls" id="controls">
     <button id="back" type="button" aria-label="Indietro di 10 secondi">−10 s</button>
@@ -49,5 +51,5 @@
   <small id="audio-error" role="status" hidden></small>
   <audio id="audio" preload="none"></audio>
 </footer>
-<script src="app.js?v=14" defer></script>
+<script src="app.js?v=17" defer></script>
 </html>

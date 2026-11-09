@@ -40,7 +40,7 @@ footer input[type=range] { accent-color: var(--accent); }
 #back, #forward { min-height: 3.75rem; border-radius: 1.25rem; font-size: 1.2rem; }
 #back { grid-area: back; }
 #forward { grid-area: forward; }
-#toggle { grid-area: play; display: grid; place-items: center; align-self: stretch; min-height: 6.5rem; border-radius: 999px; }
+#toggle { grid-area: play; display: grid; place-items: center; justify-self: center; width: min(100%, 6.5rem); aspect-ratio: 1; border-radius: 50%; }
 #toggle svg { width: 3rem; height: 3rem; fill: currentColor; }
 .playback-options { grid-area: speed; justify-self: end; min-width: 0; font-size: .85rem; }
 .playback-options select { min-height: 2.25rem; max-width: 100%; padding: .25rem .35rem; }
@@ -98,10 +98,9 @@ header #queue-home:not([hidden]) + #refresh { margin-left: 0; }
 
 #player { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: .35rem .55rem; align-items: center; }
 #player .playing { min-width: 0; border: 0; background: transparent; padding: 0; text-align: left; }
+#player-view:disabled { cursor: default; opacity: 1; }
 .playing-labels { min-width: 0; flex: 1; }
-.view-chevron { flex: none; }
-#player.is-expanded .view-chevron { transform: rotate(180deg); }
-#player:not(.is-expanded) :is(.timeline, #back, #forward, .playback-options, #queue-player) { display: none; }
+#player:not(.is-expanded) :is(.timeline, #back, #forward, .playback-options, .player-actions) { display: none; }
 #player:not(.is-expanded) .controls { display: block; margin: 0; }
 #player:not(.is-expanded) #toggle { min-height: 0; width: 3rem; height: 3rem; }
 #player:not(.is-expanded) #toggle svg { width: 1.6rem; height: 1.6rem; }
@@ -109,3 +108,9 @@ header #queue-home:not([hidden]) + #refresh { margin-left: 0; }
 #player.is-expanded :is(.controls, .timeline), #audio-error { grid-column: 1 / -1; }
 #player.is-expanded .controls { width: 100%; }
 body:has(#player:not([hidden]):not(.is-expanded)) main { padding-bottom: calc(6rem + env(safe-area-inset-bottom)); }
+
+#resume-section { margin-top: 1rem; }
+#resume-section > summary { cursor: pointer; font-weight: 700; padding: .4rem 0; }
+#resume-list button, #finish-episode { min-width: 2.65rem; }
+.player-actions { display: flex; gap: .35rem; }
+#finish-episode { font-weight: 700; font-size: 1.2rem; }
