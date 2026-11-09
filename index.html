@@ -7,8 +7,8 @@
 <link rel="manifest" href="bean.webmanifest">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-192.png">
-<link rel="stylesheet" href="style.css?v=13">
-<header><img src="icon.svg" alt=""><h1>Bean</h1><button id="refresh" type="button">Aggiorna</button></header>
+<link rel="stylesheet" href="style.css?v=14">
+<header><img src="icon.svg" alt=""><h1>Bean</h1><button id="queue-home" type="button" hidden>Coda</button><button id="refresh" type="button">Aggiorna</button></header>
 <main>
   <form id="search"><label class="sr" for="query">Cerca un podcast</label>
     <input id="query" type="search" placeholder="Cerca un podcast" required maxlength="120">
@@ -19,18 +19,23 @@
     <div class="heading"><h2>Risultati</h2><button id="close-results" type="button">Chiudi</button></div>
     <ul id="results"></ul>
   </section>
-  <section id="resume-section" hidden><h2>Riprendi</h2><ul id="resume-list"></ul></section>
-  <section id="queue-section" hidden><h2>Coda</h2><ul id="queue-list"></ul></section>
+  <section id="resume-section" aria-label="Riprendi" hidden><ul id="resume-list"></ul></section>
   <section><h2>Podcast seguiti</h2><ul id="following"></ul></section>
-  <p class="colophon">Bean v13 · Oscar Collini fecit · <a href="https://creativecommons.org/licenses/by-sa/4.0/deed.it" target="_blank" rel="noopener">CC BY-SA 4.0</a></p>
+  <p class="colophon">Bean v14 · Oscar Collini fecit · <a href="https://creativecommons.org/licenses/by-sa/4.0/deed.it" target="_blank" rel="noopener">CC BY-SA 4.0</a></p>
 </main>
+<dialog id="queue-dialog" aria-labelledby="queue-title">
+  <div class="heading"><h2 id="queue-title">Coda</h2><form method="dialog"><button>Chiudi</button></form></div>
+  <ul id="queue-list"></ul>
+</dialog>
 <footer id="player" hidden>
-  <div class="playing">
+  <button class="playing" id="player-view" type="button" aria-expanded="false" aria-controls="controls" aria-label="Apri vista guida">
     <img id="playing-cover" class="cover" alt="">
-    <div><strong id="playing-title"></strong><small id="playing-show"></small></div>
-  </div>
+    <span class="playing-labels"><strong id="playing-title"></strong><small id="playing-show"></small></span>
+    <span class="view-chevron" aria-hidden="true">⌃</span>
+  </button>
+  <button id="queue-player" type="button">Coda</button>
   <div class="timeline"><span id="elapsed">0:00</span><input id="position" type="range" min="0" max="1" step="1" value="0" aria-label="Posizione di riproduzione" disabled><span id="duration">–:––</span></div>
-  <div class="controls">
+  <div class="controls" id="controls">
     <button id="back" type="button" aria-label="Indietro di 10 secondi">−10 s</button>
     <button id="toggle" type="button" aria-label="Riproduci">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path class="play-icon" d="M6 3l15 9-15 9z"/><path class="pause-icon" d="M5 4h5v16H5zm9 0h5v16h-5z"/></svg>
@@ -44,5 +49,5 @@
   <small id="audio-error" role="status" hidden></small>
   <audio id="audio" preload="none"></audio>
 </footer>
-<script src="app.js?v=11" defer></script>
+<script src="app.js?v=14" defer></script>
 </html>

@@ -67,10 +67,45 @@ body:has(footer:not([hidden])) main { padding-bottom: calc(17rem + env(safe-area
 .playing { display: flex; align-items: center; gap: .6rem; }
 .playing > div { min-width: 0; }
 .episode-more summary { font-size: .875rem; padding: .65rem .4rem; }
-.episode-more[open] { flex-basis: 100%; }
 .episode-more button { margin-right: .35rem; }
 #queue-list button { padding-inline: .55rem; }
 
 
 .colophon { margin: 1.6rem 0 1rem; text-align: center; font-size: .75rem; color: var(--accent); }
 .colophon a { color: inherit; }
+
+/* Keep episode navigation and the archive visually separate. */
+.podcast .archive { margin: .8rem 0 .25rem .5rem; padding: .25rem .75rem; border: 1px solid var(--line); border-radius: .65rem; }
+.podcast .archive > summary { font-size: .875rem; font-weight: 500; }
+.archive li:last-child { border-bottom: 0; }
+.episode { display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: .45rem; align-items: start; }
+.episode > div:first-child strong { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
+.episode-actions { display: flex; flex-wrap: nowrap; align-items: start; margin-top: 0; }
+.episode-more { position: relative; }
+.episode-more > summary { display: grid; place-items: center; min-width: 2.65rem; min-height: 2.65rem; padding: 0; border: 1px solid var(--line); border-radius: .7rem; font-size: 1.2rem; }
+.episode:has(.episode-more[open]) .episode-actions { grid-column: 1 / -1; justify-content: flex-end; margin-top: .35rem; }
+.episode-more[open] > :not(summary) { width: max-content; max-width: min(65vw, 18rem); margin: .35rem 0 0 auto; }
+.episode-more[open] { display: flex; flex-direction: column; align-items: flex-end; }
+.episode-more .archive-action button { border: 0; background: transparent; font-size: .75rem; text-decoration: underline; padding-inline: .25rem; }
+.episode-actions > button { width: 2.65rem; padding-inline: 0; }
+
+#queue-home { margin-left: auto; }
+header #queue-home:not([hidden]) + #refresh { margin-left: 0; }
+#queue-dialog { width: min(32rem, calc(100% - 2rem)); max-height: 75dvh; padding: 1rem; border: 1px solid var(--line); border-radius: .9rem; background: var(--panel); color: var(--accent); }
+#queue-dialog::backdrop { background: #432c4c66; }
+#queue-dialog .heading { justify-content: space-between; }
+#queue-dialog h2 { margin: 0; }
+
+#player { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: .35rem .55rem; align-items: center; }
+#player .playing { min-width: 0; border: 0; background: transparent; padding: 0; text-align: left; }
+.playing-labels { min-width: 0; flex: 1; }
+.view-chevron { flex: none; }
+#player.is-expanded .view-chevron { transform: rotate(180deg); }
+#player:not(.is-expanded) :is(.timeline, #back, #forward, .playback-options, #queue-player) { display: none; }
+#player:not(.is-expanded) .controls { display: block; margin: 0; }
+#player:not(.is-expanded) #toggle { min-height: 0; width: 3rem; height: 3rem; }
+#player:not(.is-expanded) #toggle svg { width: 1.6rem; height: 1.6rem; }
+#player:not(.is-expanded) #playing-cover { width: 2.6rem; height: 2.6rem; }
+#player.is-expanded :is(.controls, .timeline), #audio-error { grid-column: 1 / -1; }
+#player.is-expanded .controls { width: 100%; }
+body:has(#player:not([hidden]):not(.is-expanded)) main { padding-bottom: calc(6rem + env(safe-area-inset-bottom)); }

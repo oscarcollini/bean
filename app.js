@@ -265,11 +265,12 @@ function episodeRow(episode, older = []) {
   const actions = document.createElement('div');
   actions.className = 'episode-actions';
   const playLabel = entry?.listened ? 'Riascolta' : progress ? 'Riprendi' : 'Ascolta';
-  button(actions, playLabel, () => openEpisode(episode), playLabel + ' ' + episode.title);
+  button(actions, '▶', () => openEpisode(episode), playLabel + ' ' + episode.title);
   const markLabel = entry?.listened ? 'Da ascoltare' : 'Già ascoltato';
-  button(actions, markLabel, () => markListened(episode, !entry?.listened),
+  const more = details('⋯', false);
+  more.firstChild.setAttribute('aria-label', 'Altre azioni · ' + episode.title);
+  button(more, markLabel, () => markListened(episode, !entry?.listened),
     markLabel + ' · ' + episode.title);
-  const more = details('Altro', false);
   more.className = 'episode-more';
   if (!entry?.listened) {
     const queued = state.queue.some(candidate => episodeKey(candidate) === episodeKey(episode));
@@ -283,16 +284,19 @@ function episodeRow(episode, older = []) {
       render();
     });
     if (older.length) {
-      button(more, 'Archivia fino a qui', () => {
+      const secondary = document.createElement('div');
+      secondary.className = 'archive-action';
+      button(secondary, 'Archivia fino a qui', () => {
         const batch = [episode, ...older];
         if (!confirm('Archiviare ' + batch.length + ' puntate di ' + episode.show + '?')) return;
         batch.forEach(candidate => setListened(candidate, true));
         save();
         render();
       });
+      more.append(secondary);
     }
-    actions.append(more);
   }
+  actions.append(more);
   item.append(actions);
   return item;
 }
@@ -313,13 +317,14 @@ function renderShortcuts() {
     .sort((a, b) => (b.touched || 0) - (a.touched || 0));
   $('resume-section').hidden = !inProgress.length;
   $('resume-list').replaceChildren();
-  for (const episode of inProgress) {
+  for (const episode of inProgress.slice(0, 1)) {
     const item = row(episode.title, episode.show + ' · ' + clock(episode.position));
     button(item, 'Riprendi', () => openEpisode(episode), 'Riprendi ' + episode.title);
     $('resume-list').append(item);
   }
-  $('queue-section').hidden = !state.queue.length;
+  $('queue-home').hidden = !state.queue.length || !$('player').hidden;
   $('queue-list').replaceChildren();
+  if (!state.queue.length) empty($('queue-list'), 'La coda è vuota.');
   state.queue.forEach((episode, index) => {
     const item = row(episode.title, episode.show);
     button(item, 'Play', () => openEpisode(episode), 'Ascolta ' + episode.title);
@@ -355,6 +360,7 @@ function render() {
     const savedPanel = oldPanels.get(show.feed);
     const podcast = details(show.title, savedPanel?.open ?? state.shows.length === 1);
     podcast.dataset.feed = show.feed;
+    podcast.setAttribute('name', 'bean-podcasts');
     const thumbnail = document.createElement('span');
     thumbnail.className = 'podcast-cover';
     thumbnail.append(cover(show.artwork));
@@ -403,7 +409,7 @@ function render() {
     if (!pending.children.length) empty(pending, 'Nessuna puntata da ascoltare.');
     podcast.append(pending);
     if (listened.children.length) {
-      const archive = details('Archivio (' + listened.children.length + ')', savedPanel?.archive ?? false);
+      const archive = details('Puntate ascoltate (' + listened.children.length + ')', savedPanel?.archive ?? false);
       archive.className = 'archive';
       archive.append(listened);
       podcast.append(archive);
@@ -542,6 +548,7 @@ function openEpisode(episode, autoplay = true) {
   state.current = { ...episode, position: resumeAt };
   save();
   $('player').hidden = false;
+  $('queue-home').hidden = true;
   $('playing-title').textContent = episode.title;
   $('playing-show').textContent = episode.show;
   showAudioError();
@@ -590,6 +597,13 @@ function updateTimeline() {
     });
   }
 }
+
+$('player-view').onclick = () => {
+  const expanded = $('player').classList.toggle('is-expanded');
+  $('player-view').setAttribute('aria-expanded', String(expanded));
+  $('player-view').setAttribute('aria-label', expanded ? 'Comprimi lettore' : 'Apri vista guida');
+};
+$('queue-home').onclick = $('queue-player').onclick = () => $('queue-dialog').showModal();
 
 $('toggle').onclick = () => { if (audio.paused) play(); else audio.pause(); };
 $('back').onclick = () => seek(audio.currentTime - 10);

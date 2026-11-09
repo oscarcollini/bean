@@ -23,7 +23,7 @@ dispositivo lo stato e il punto raggiunto nelle singole puntate.
 COPERTINE, RIPRENDI E CODA
 
 Le copertine arrivano dal catalogo o dal feed. Riprendi mostra le puntate
-interrotte. In Altro trovi Archivia fino a qui e In coda. La freccia su
+interrotte. Nel menu ⋯ trovi Archivia fino a qui e In coda. La freccia su
 sposta una puntata in testa alla coda. Quando una puntata finisce, Bean
 avvia la prima in coda.
 
@@ -34,3 +34,9 @@ pausa. Un pallino accanto alla copertina segnala le nuove puntate anche
 con la scheda del podcast chiusa. Scompare quando le avvii o le segni tutte
 come ascoltate. Bean controlla all'apertura e
 non invia notifiche quando la PWA è chiusa.
+
+INTERFACCIA
+
+Aprendo un podcast si chiude quello aperto prima. Le puntate ascoltate
+sono in un riquadro a parte dentro il podcast. Il lettore parte compatto:
+tocca il titolo per aprire la vista guida. Nella vista guida trovi Coda.
