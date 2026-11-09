@@ -1,0 +1,21 @@
+BEAN — prima versione
+
+Avvio sul computer
+1. Estrai lo ZIP.
+2. Apri un terminale nella cartella Bean ed esegui: python3 server.py
+3. Apri http://localhost:8000 in Chrome o Edge.
+
+Su Android
+Bean va servito su un indirizzo HTTPS per installarlo dal menu di Chrome.
+Il server Python serve sia la pagina sia ricerca e feed. Per ospitarlo,
+usa un servizio che esegua Python, inoltri il traffico al server e fornisca HTTPS.
+Avvio nel servizio: python3 server.py --host 0.0.0.0 --port 8000
+Non è necessario un account in Bean. La ricerca usa il catalogo Apple Italia.
+La pagina si apre anche offline dopo la prima visita, mentre ricerca,
+aggiornamento e streaming richiedono Internet.
+
+Uso
+Cerca un podcast, premi Segui e poi Ascolta. Il lettore ha −10 s, +30 s
+e velocità da 0,75× a 2×. Bean ricorda l'ultima puntata e la posizione
+sul dispositivo. I feed si aggiornano all'apertura e ogni mezz'ora
+mentre Bean è in uso. Aggiorna forza il controllo.

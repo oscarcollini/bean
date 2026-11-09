@@ -1,0 +1,39 @@
+:root {
+  color-scheme: light;
+  font: 16px system-ui, sans-serif;
+  --cream: #f8f6eb;
+  --green: #345425;
+  --ink: #20291b;
+  --line: #dbdfca;
+  --muted: #56634d;
+  --panel: #fffdf5;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { margin: 0 auto; max-width: 44rem; background: var(--cream); color: var(--ink); }
+header, main { padding: 0 1rem; }
+header, .heading, li, form, .timeline, .controls { display: flex; align-items: center; gap: .55rem; }
+header { min-height: 4.8rem; }
+header img { width: 2.55rem; height: 2.55rem; }
+h1 { margin: 0; color: var(--green); font-size: 1.8rem; }
+header button, .heading button, li button:first-of-type { margin-left: auto; }
+h2 { font-size: 1.13rem; margin: 1.25rem 0 .65rem; }
+section { margin-bottom: 1.35rem; }
+button, input, select { font: inherit; }
+button, select { min-height: 2.65rem; border: 1px solid var(--line); border-radius: .7rem; padding: .45rem .65rem; color: var(--green); background: var(--panel); cursor: pointer; }
+button[type=submit], #toggle { background: var(--green); color: white; border-color: var(--green); }
+input[type=search] { flex: 1; min-width: 0; min-height: 2.7rem; border: 1px solid var(--line); background: var(--panel); border-radius: .7rem; padding: .5rem .7rem; color: var(--ink); }
+input[type=range] { flex: 1; min-width: 0; accent-color: var(--green); }
+ul { list-style: none; margin: 0; padding: 0; }
+li { border-bottom: 1px solid var(--line); padding: .65rem 0; }
+li > div { flex: 1; min-width: 0; }
+strong, small { display: block; overflow-wrap: anywhere; }
+small, .empty, #status { color: var(--muted); }
+footer { position: fixed; left: 50%; bottom: 0; transform: translateX(-50%); width: min(100%, 44rem); border-top: 1px solid var(--line); padding: .65rem 1rem calc(.65rem + env(safe-area-inset-bottom)); background: var(--panel); }
+footer strong, footer small { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.timeline { font-size: .8rem; margin: .35rem 0; }
+.controls { justify-content: center; }
+#toggle { min-width: 4.8rem; }
+body:has(footer:not([hidden])) main { padding-bottom: var(--player-height, 11rem); }
+:focus-visible { outline: 2px solid var(--green); outline-offset: 2px; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
