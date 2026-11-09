@@ -356,13 +356,18 @@ function render() {
     const savedPanel = oldPanels.get(show.feed);
     const podcast = details(show.title, savedPanel?.open ?? state.shows.length === 1);
     podcast.dataset.feed = show.feed;
-    podcast.firstChild.prepend(cover(show.artwork));
+    const thumbnail = document.createElement('span');
+    thumbnail.className = 'podcast-cover';
+    thumbnail.append(cover(show.artwork));
     if (show.newIds?.length) {
-      const badge = document.createElement('span');
-      badge.className = 'new-count';
-      badge.textContent = show.newIds.length === 1 ? '1 nuova' : show.newIds.length + ' nuove';
-      podcast.firstChild.append(badge);
+      const dot = document.createElement('span');
+      dot.className = 'new-dot';
+      const label = document.createElement('span');
+      label.className = 'sr';
+      label.textContent = 'Nuove puntate';
+      thumbnail.append(dot, label);
     }
+    podcast.firstChild.prepend(thumbnail);
     const header = document.createElement('div');
     header.className = 'podcast-header';
     const author = document.createElement('small');

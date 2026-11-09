@@ -14,7 +14,7 @@
 body { margin: 0 auto; max-width: 44rem; background: var(--surface); color: var(--ink); }
 header, main { padding: 0 1rem; }
 header, .heading, li, form, .timeline, .controls { display: flex; align-items: center; gap: .55rem; }
-header { min-height: 4.8rem; }
+header { min-height: 4.8rem; background: var(--pea); }
 header img { width: 2.55rem; height: 2.55rem; }
 h1 { margin: 0; color: var(--green); font-size: 1.8rem; }
 header button, .heading button, li button:first-of-type { margin-left: auto; }
@@ -39,15 +39,18 @@ footer input[type=range] { accent-color: var(--pea); }
 footer :focus-visible { outline-color: var(--pea); }
 .timeline { font-size: .95rem; margin: .4rem 0; font-variant-numeric: tabular-nums; }
 .timeline input { height: 2rem; }
-.controls { display: grid; grid-template-columns: 1fr 1.15fr 1fr auto; gap: .4rem; }
-.controls button, .controls select { min-width: 0; min-height: 4rem; padding-inline: .35rem; font-size: 1.05rem; font-weight: 650; }
-#toggle { display: grid; place-items: center; }
-#toggle svg { width: 2rem; height: 2rem; fill: currentColor; }
+.controls { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: .65rem; max-width: 26rem; margin: 0 auto; }
+.controls > button { min-width: 0; padding: 0 .25rem; font-weight: 700; }
+#back, #forward { min-height: 3.75rem; border-radius: 1.25rem; font-size: 1.2rem; }
+#toggle { display: grid; place-items: center; width: 5.25rem; height: 5.25rem; border-radius: 50%; }
+#toggle svg { width: 2.3rem; height: 2.3rem; fill: currentColor; }
+.playback-options { display: flex; align-items: center; justify-content: flex-end; gap: .45rem; margin-top: .35rem; font-size: .85rem; }
+.playback-options select { min-height: 2.2rem; padding: .25rem .45rem; }
 #toggle .pause-icon, #toggle.is-playing .play-icon { display: none; }
 #toggle.is-playing .pause-icon { display: inline; }
 #playing-cover { width: 3.25rem; height: 3.25rem; }
 #playing-title { font-size: 1.1rem; }
-body:has(footer:not([hidden])) main { padding-bottom: calc(13rem + env(safe-area-inset-bottom)); }
+body:has(footer:not([hidden])) main { padding-bottom: calc(17rem + env(safe-area-inset-bottom)); }
 :focus-visible { outline: 2px solid var(--green); outline-offset: 2px; }
 .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 
@@ -61,7 +64,8 @@ body:has(footer:not([hidden])) main { padding-bottom: calc(13rem + env(safe-area
 .archive { padding-top: .35rem; }
 
 .cover { width: 2.55rem; height: 2.55rem; border-radius: .55rem; object-fit: cover; vertical-align: middle; flex: none; }
-.podcast summary .cover { margin: 0 .45rem; }
+.podcast-cover { position: relative; display: inline-block; vertical-align: middle; margin: 0 .55rem 0 .4rem; }
+.new-dot { position: absolute; top: -.16rem; right: -.22rem; width: .7rem; height: .7rem; border: 1px solid var(--green); border-radius: 50%; background: var(--pea); }
 .playing { display: flex; align-items: center; gap: .6rem; }
 .playing > div { min-width: 0; }
 .episode-more summary { font-size: .875rem; padding: .65rem .4rem; }
@@ -69,4 +73,6 @@ body:has(footer:not([hidden])) main { padding-bottom: calc(13rem + env(safe-area
 .episode-more button { margin-right: .35rem; }
 #queue-list button { padding-inline: .55rem; }
 
-.new-count { display: inline-block; margin-left: .5rem; padding: .15rem .45rem; border-radius: .45rem; background: var(--pea); color: var(--green); font-size: .8rem; }
+
+.colophon { margin: 1.6rem 0 1rem; text-align: center; font-size: .75rem; color: var(--muted); }
+.colophon a { color: inherit; }
