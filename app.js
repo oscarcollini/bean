@@ -20,6 +20,7 @@ if (state.current?.position > 0) {
 let refreshing = false;
 let resumeAt = 0;
 let lastSavedPosition = 0;
+let replayingArchived = false;
 
 function save() {
   try {
@@ -234,6 +235,7 @@ function setListened(episode, listened) {
   state.listening[key] = { ...episode, listened, position: listened ? 0 : position };
   if (state.current && episodeKey(state.current) === key && listened) {
     state.current.position = 0;
+    replayingArchived = false;
   }
   if (listened) {
     clearNewEpisode(episode);
@@ -258,13 +260,13 @@ function addToQueue(episode) {
 function episodeRow(episode, older = []) {
   const entry = state.listening[episodeKey(episode)];
   const date = episode.date ? new Date(episode.date).toLocaleDateString('it-IT') : '';
-  const progress = !entry?.listened && entry?.position >= 1 ? 'A ' + clock(entry.position) : '';
+  const progress = entry?.position >= 1 ? 'A ' + clock(entry.position) : '';
   const isNew = state.shows.find(show => show.feed === episode.feed)?.newIds?.includes(episode.id);
   const item = row(episode.title, [isNew ? 'Nuova' : '', date, progress].filter(Boolean).join(' · '));
   item.className = 'episode';
   const actions = document.createElement('div');
   actions.className = 'episode-actions';
-  const playLabel = entry?.listened ? 'Riascolta' : progress ? 'Riprendi' : 'Ascolta';
+  const playLabel = entry?.position > 0 ? 'Riprendi' : entry?.listened ? 'Riascolta' : 'Ascolta';
   button(actions, '▶', () => selectEpisode(episode), playLabel + ' ' + episode.title);
   const markLabel = entry?.listened ? 'Da ascoltare' : 'Già ascoltato';
   const more = details('⋯', false);
@@ -314,7 +316,7 @@ function renderShortcuts() {
   const followed = new Set(state.shows.map(show => show.feed));
   const currentKey = state.current ? episodeKey(state.current) : null;
   const inProgress = Object.values(state.listening)
-    .filter(entry => entry.position > 0 && !entry.listened &&
+    .filter(entry => entry.position > 0 &&
       followed.has(entry.feed) && episodeKey(entry) !== currentKey)
     .sort((a, b) => (b.touched || 0) - (a.touched || 0));
   $('resume-home').hidden = !inProgress.length || !$('player').hidden;
@@ -524,9 +526,10 @@ function rememberPosition() {
   if (!Number.isFinite(position) || (position === 0 && (audio.readyState === 0 || resumeAt > 0))) return;
   lastSavedPosition = position;
   const key = episodeKey(state.current);
-  if (state.listening[key]?.listened) return;
+  const listened = Boolean(state.listening[key]?.listened);
+  if (listened && !replayingArchived) return;
   state.current.position = lastSavedPosition;
-  state.listening[key] = { ...state.current, touched: Date.now() };
+  state.listening[key] = { ...state.current, listened, touched: Date.now() };
   save();
 }
 
@@ -536,6 +539,7 @@ function showAudioError(message = '') {
 }
 
 function play() {
+  if (state.current) replayingArchived = Boolean(state.listening[episodeKey(state.current)]?.listened);
   showAudioError();
   audio.play().catch(error => {
     if (error.name !== 'AbortError') showAudioError('Riproduzione non disponibile. Tocca Play per riprovare.');
@@ -554,7 +558,7 @@ function openEpisode(episode, autoplay = true) {
   const same = state.current?.feed === episode.feed && state.current?.id === episode.id;
   if (same && audio.hasAttribute('src')) {
     if (autoplay) {
-      if (state.listening[episodeKey(episode)]?.listened) seek(0);
+      if (audio.ended) seek(0);
       play();
     }
     return;
@@ -562,7 +566,8 @@ function openEpisode(episode, autoplay = true) {
 
   rememberPosition();
   const saved = state.listening[episodeKey(episode)];
-  resumeAt = saved?.listened ? 0 : saved?.position ?? (same ? state.current.position || 0 : 0);
+  replayingArchived = false;
+  resumeAt = saved?.position ?? (same ? state.current.position || 0 : 0);
   lastSavedPosition = resumeAt;
   state.current = { ...episode, position: resumeAt };
   save();

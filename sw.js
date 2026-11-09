@@ -1,5 +1,5 @@
-const CACHE = 'bean-shell-pages-18';
-const SHELL = ['./', './index.html', './style.css?v=18', './app.js?v=18', './icon.svg',
+const CACHE = 'bean-shell-pages-19';
+const SHELL = ['./', './index.html', './style.css?v=18', './app.js?v=19', './icon.svg',
   './icon-192.png', './icon-512.png', './bean.webmanifest'];
 
 self.addEventListener('install', event => {
