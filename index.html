@@ -7,7 +7,7 @@
 <link rel="manifest" href="bean.webmanifest">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-192.png">
-<link rel="stylesheet" href="style.css?v=12">
+<link rel="stylesheet" href="style.css?v=13">
 <header><img src="icon.svg" alt=""><h1>Bean</h1><button id="refresh" type="button">Aggiorna</button></header>
 <main>
   <form id="search"><label class="sr" for="query">Cerca un podcast</label>
@@ -22,7 +22,7 @@
   <section id="resume-section" hidden><h2>Riprendi</h2><ul id="resume-list"></ul></section>
   <section id="queue-section" hidden><h2>Coda</h2><ul id="queue-list"></ul></section>
   <section><h2>Podcast seguiti</h2><ul id="following"></ul></section>
-  <p class="colophon">Oscar Collini fecit · <a href="https://creativecommons.org/licenses/by-sa/4.0/deed.it" target="_blank" rel="noopener">CC BY-SA 4.0</a></p>
+  <p class="colophon">Bean v13 · Oscar Collini fecit · <a href="https://creativecommons.org/licenses/by-sa/4.0/deed.it" target="_blank" rel="noopener">CC BY-SA 4.0</a></p>
 </main>
 <footer id="player" hidden>
   <div class="playing">
@@ -36,10 +36,10 @@
       <svg viewBox="0 0 24 24" aria-hidden="true"><path class="play-icon" d="M6 3l15 9-15 9z"/><path class="pause-icon" d="M5 4h5v16H5zm9 0h5v16h-5z"/></svg>
     </button>
     <button id="forward" type="button" aria-label="Avanti di 30 secondi">+30 s</button>
-  </div>
-  <div class="playback-options">
-    <label for="rate">Velocità</label>
-    <select id="rate"><option value=".75">0,75×</option><option value="1" selected>1×</option><option value="1.25">1,25×</option><option value="1.5">1,5×</option><option value="1.75">1,75×</option><option value="2">2×</option></select>
+    <div class="playback-options">
+      <label class="sr" for="rate">Velocità</label>
+      <select id="rate"><option value=".75">0,75×</option><option value="1" selected>1×</option><option value="1.25">1,25×</option><option value="1.5">1,5×</option><option value="1.75">1,75×</option><option value="2">2×</option></select>
+    </div>
   </div>
   <small id="audio-error" role="status" hidden></small>
   <audio id="audio" preload="none"></audio>
