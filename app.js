@@ -486,6 +486,8 @@ function render() {
     podcast.firstChild.addEventListener('click', () => {
       if (!podcast.open) setPlayerExpanded(false);
     });
+    const episodePanel = document.createElement('div');
+    episodePanel.className = 'podcast-episodes';
     const header = document.createElement('div');
     header.className = 'podcast-header';
     const author = document.createElement('small');
@@ -497,7 +499,7 @@ function render() {
       save();
       render();
     }, 'Smetti di seguire ' + show.title);
-    podcast.append(header);
+    episodePanel.append(header);
 
     const episodes = new Map();
     for (const entry of Object.values(state.listening)) {
@@ -520,13 +522,14 @@ function render() {
     });
     archived.forEach(episode => listened.append(episodeRow(episode)));
     if (!pending.children.length) empty(pending, 'Nessuna puntata da ascoltare.');
-    podcast.append(pending);
+    episodePanel.append(pending);
     if (listened.children.length) {
       const archive = details('Puntate ascoltate (' + listened.children.length + ')', savedPanel?.archive ?? false);
       archive.className = 'archive';
       archive.append(listened);
-      podcast.append(archive);
+      episodePanel.append(archive);
     }
+    podcast.append(episodePanel);
     item.append(podcast);
     following.append(item);
   }

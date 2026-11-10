@@ -4,6 +4,7 @@
   --pea: #bef15e;
   --accent: #432c4c;
   --panel: #eef5df;
+  --recess: inset 2px 2px 5px #432c4c19, inset -2px -2px 4px #ffffff90;
   --line: color-mix(in srgb, var(--accent) 32%, var(--panel));
 }
 * { box-sizing: border-box; }
@@ -20,7 +21,21 @@ section { margin-bottom: 1.35rem; }
 button, input, select { font: inherit; }
 button, select { min-height: 2.65rem; border: 1px solid var(--line); border-radius: .7rem; padding: .45rem .65rem; color: var(--accent); background: var(--panel); cursor: pointer; }
 button[type=submit], #toggle { background: var(--accent); color: var(--pea); border-color: var(--accent); }
-input[type=search] { flex: 1; min-width: 0; min-height: 2.7rem; border: 1px solid var(--line); background: var(--panel); border-radius: .7rem; padding: .5rem .7rem; color: var(--accent); }
+.search-field {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: .7rem;
+  background: var(--panel);
+  box-shadow: var(--recess);
+}
+.search-field:focus-within { border-color: var(--accent); outline: 2px solid var(--accent); }
+.search-field svg { flex: none; width: 1.15rem; margin-inline-start: .65rem; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
+.search-field input { width: 100%; min-width: 0; min-height: 2.7rem; border: 0; background: transparent; padding: .5rem .65rem .5rem .4rem; color: var(--accent); }
+.search-field input:focus { outline: none; }
+.search-field input::placeholder { color: var(--accent); opacity: .8; }
 input[type=range] { flex: 1; min-width: 0; accent-color: var(--accent); }
 ul { list-style: none; margin: 0; padding: 0; }
 li { border-bottom: 1px solid var(--line); padding: .65rem 0; }
@@ -38,6 +53,14 @@ footer input[type=range] { accent-color: var(--accent); }
 .controls { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.8fr) minmax(0, 1fr); grid-template-areas: "back play forward" ". play speed"; gap: .4rem .65rem; max-width: 23rem; margin: 0 auto; }
 .controls > button { min-width: 0; padding: 0 .25rem; font-weight: 700; }
 #back, #forward { min-height: 3.75rem; border-radius: 1.25rem; font-size: 1.2rem; }
+#player :is(#back, #forward) {
+  background: var(--pea);
+  border-color: color-mix(in srgb, var(--accent) 43%, var(--pea));
+  box-shadow: 3px 3px 6px #432c4c30, -3px -3px 6px #ffffff80;
+}
+#player :is(#back, #forward):active {
+  box-shadow: inset 2px 2px 5px #432c4c35, inset -2px -2px 4px #ffffff80;
+}
 #back { grid-area: back; }
 #forward { grid-area: forward; }
 #toggle { grid-area: play; display: grid; place-items: center; justify-self: center; width: min(100%, 6.5rem); aspect-ratio: 1; border-radius: 50%; }
@@ -55,6 +78,12 @@ body:has(footer:not([hidden])) main { padding-bottom: calc(17rem + env(safe-area
 .podcast { display: block; padding: 0; }
 .podcast > details { padding: .65rem 0; }
 .podcast summary { cursor: pointer; font-weight: 650; color: var(--accent); padding: .45rem 0; overflow-wrap: anywhere; }
+.podcast-episodes {
+  padding: .65rem .65rem .35rem;
+  border-radius: .8rem;
+  background: color-mix(in srgb, var(--panel) 94%, var(--accent));
+  box-shadow: var(--recess);
+}
 .podcast-header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .35rem; }
 .episode { display: block; }
 .episode-actions { display: flex; flex-wrap: wrap; gap: .4rem; margin-top: .45rem; }
