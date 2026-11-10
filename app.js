@@ -430,6 +430,28 @@ function renderShortcuts() {
   });
 }
 
+const podcastCollator = new Intl.Collator('it', { sensitivity: 'base', numeric: true });
+const podcastOrder = $('podcast-order');
+podcastOrder.value = state.podcastOrder === 'recent' ? 'recent' : 'title';
+podcastOrder.onchange = () => {
+  state.podcastOrder = podcastOrder.value;
+  save();
+  render();
+};
+
+function orderedPodcasts() {
+  const compareTitle = (a, b) => podcastCollator.compare(a.title, b.title);
+  if (podcastOrder.value !== 'recent') return [...state.shows].sort(compareTitle);
+
+  const days = new Map(state.shows.map(show => {
+    const latest = show.episodes.reduce((max, episode) =>
+      Number.isFinite(episode.date) && episode.date !== 0 ? Math.max(max, episode.date) : max, -Infinity);
+    const day = Number.isFinite(latest) ? new Date(latest).setHours(0, 0, 0, 0) : -Infinity;
+    return [show, day];
+  }));
+  return [...state.shows].sort((a, b) => days.get(b) - days.get(a) || compareTitle(a, b));
+}
+
 function render() {
   renderShortcuts();
   const following = $('following');
@@ -442,7 +464,7 @@ function render() {
     return;
   }
 
-  for (const show of state.shows) {
+  for (const show of orderedPodcasts()) {
     const item = document.createElement('li');
     item.className = 'podcast';
     const savedPanel = oldPanels.get(show.feed);

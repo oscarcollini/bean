@@ -119,3 +119,7 @@ body:has(#player:not([hidden]):not(.is-expanded)) main { padding-bottom: calc(6r
 .install-panel { text-align: center; margin: 1.2rem 0; }
 .install-panel p { margin: .45rem 0 0; font-size: .85rem; }
 .install-panel p:empty { display: none; }
+
+.podcast-list-heading { justify-content: space-between; flex-wrap: wrap; gap: .45rem; margin: 1.25rem 0 .35rem; }
+.podcast-list-heading h2 { margin: 0; }
+.podcast-list-heading select { font-size: .88rem; min-height: 2.35rem; }
