@@ -51,6 +51,10 @@
 
 const $ = id => document.getElementById(id);
 const audio = $('audio');
+const pageSize = 30;
+const episodeCatalogs = new Map();
+const visibleEpisodes = new Map();
+const loadingOlder = new Set();
 const interval = 30 * 60 * 1000;
 const storageKey = 'bean-library-v1';
 let state = { shows: [], current: null, rate: 1 };
@@ -131,9 +135,15 @@ async function feedResponse(url) {
   return response;
 }
 
-async function readSpreakerEpisodes(showId) {
-  const url = new URL('https://api.spreaker.com/v2/shows/' + showId + '/episodes');
-  url.searchParams.set('limit', '30');
+function spreakerNextPage(nextUrl, currentUrl) {
+  const next = webLink(nextUrl);
+  if (!next) return '';
+  const url = new URL(next);
+  return url.origin === currentUrl.origin && url.pathname === currentUrl.pathname &&
+    url.href !== currentUrl.href ? url.href : '';
+}
+
+async function readSpreakerEpisodes(url) {
   const response = await feedResponse(url);
   const { response: show } = await response.json();
   if (!Array.isArray(show?.items)) throw new Error('Risposta Spreaker non valida');
@@ -152,9 +162,8 @@ async function readSpreakerEpisodes(showId) {
       notes: String(item.description || '').slice(0, 32000),
       link: webLink(item.site_url || item.permalink, url.href)
     }];
-  }).sort((a, b) => b.date - a.date).slice(0, 30);
-  if (show.items.length && !episodes.length) throw new Error('Audio Spreaker non disponibile');
-  return { episodes, artwork: '' };
+  }).sort((a, b) => b.date - a.date);
+  return { episodes, artwork: '', nextPage: spreakerNextPage(show.next_url, url) };
 }
 
 async function readEpisodes(feed) {
@@ -166,7 +175,11 @@ async function readEpisodes(feed) {
     source.pathname.match(/^\/show\/(\d+)\/episodes\/feed\/?$/)?.[1];
   if (spreakerId) {
     try {
-      return await readSpreakerEpisodes(spreakerId);
+      const url = new URL('https://api.spreaker.com/v2/shows/' + spreakerId + '/episodes');
+      url.searchParams.set('sorting', 'newest');
+      url.searchParams.set('limit', String(pageSize));
+      const feed = await readSpreakerEpisodes(url);
+      if (feed.episodes.length || feed.nextPage) return feed;
     } catch {
       // The publisher's RSS remains available as a fallback.
     }
@@ -269,8 +282,7 @@ function parseFeed(bytes, baseUrl) {
         return [];
       }
     })
-    .sort((a, b) => b.date - a.date)
-    .slice(0, 30);
+    .sort((a, b) => b.date - a.date);
   return { episodes, artwork };
 }
 
@@ -314,17 +326,19 @@ function clearNewEpisode(episode) {
 }
 
 function updateFeed(show, feed) {
+  episodeCatalogs.set(show.feed, feed);
+  const recent = feed.episodes.slice(0, pageSize);
   const previousIds = new Set(show.episodes.map(episode => episode.id));
   const latestDate = Math.max(0, ...show.episodes.map(episode => episode.date));
   const newIds = new Set(show.newIds || []);
-  for (const episode of feed.episodes) {
+  for (const episode of recent) {
     if (!previousIds.has(episode.id) && episode.date >= latestDate &&
         !state.listening[episodeKey({ ...episode, feed: show.feed })]) {
       newIds.add(episode.id);
     }
   }
-  show.episodes = feed.episodes;
-  show.newIds = feed.episodes.filter(episode => newIds.has(episode.id)).map(episode => episode.id);
+  show.episodes = recent;
+  show.newIds = recent.filter(episode => newIds.has(episode.id)).map(episode => episode.id);
   show.artwork ||= feed.artwork;
 }
 
@@ -529,6 +543,36 @@ function orderedPodcasts() {
   return [...state.shows].sort((a, b) => days.get(b) - days.get(a) || compareTitle(a, b));
 }
 
+async function showOlderEpisodes(show, limit, hasMoreLocally, control) {
+  const catalog = episodeCatalogs.get(show.feed);
+  if (!hasMoreLocally && catalog?.nextPage) {
+    if (loadingOlder.has(show.feed)) return;
+    loadingOlder.add(show.feed);
+    control.disabled = true;
+    control.textContent = 'Carico le puntate…';
+    try {
+      const page = await readSpreakerEpisodes(new URL(catalog.nextPage));
+      if (episodeCatalogs.get(show.feed) !== catalog) return;
+      const known = new Set(catalog.episodes.map(episode => episode.id));
+      for (const episode of page.episodes) {
+        if (known.has(episode.id)) continue;
+        catalog.episodes.push(episode);
+        known.add(episode.id);
+      }
+      catalog.nextPage = page.nextPage;
+    } catch {
+      status('Non riesco a caricare le puntate precedenti. Riprova.');
+      return;
+    } finally {
+      loadingOlder.delete(show.feed);
+      control.disabled = false;
+      control.textContent = 'Mostra puntate precedenti';
+    }
+  }
+  visibleEpisodes.set(show.feed, limit + pageSize);
+  render();
+}
+
 function render() {
   renderShortcuts();
   const following = $('following');
@@ -572,6 +616,8 @@ function render() {
     header.append(author);
     button(header, 'Smetti di seguire', () => {
       state.shows = state.shows.filter(candidate => candidate !== show);
+      episodeCatalogs.delete(show.feed);
+      visibleEpisodes.delete(show.feed);
       state.queue = state.queue.filter(episode => episode.feed !== show.feed);
       save();
       render();
@@ -584,7 +630,8 @@ function render() {
         episodes.set(entry.id, entry);
       }
     }
-    for (const episode of show.episodes) {
+    const catalog = episodeCatalogs.get(show.feed);
+    for (const episode of catalog?.episodes ?? show.episodes) {
       episodes.set(episode.id, { ...episode, show: show.title, feed: show.feed });
     }
     const pending = document.createElement('ul');
@@ -592,14 +639,22 @@ function render() {
     const ordered = [...episodes.values()].sort((a, b) => b.date - a.date);
     const remaining = ordered.filter(episode => !state.listening[episodeKey(episode)]?.listened);
     const archived = ordered.filter(episode => state.listening[episodeKey(episode)]?.listened);
-    remaining.forEach((episode, index) => {
-      const older = episode.date ? remaining.slice(index + 1)
+    const limit = visibleEpisodes.get(show.feed) ?? pageSize;
+    const visible = remaining.slice(0, limit);
+    visible.forEach((episode, index) => {
+      const older = episode.date ? visible.slice(index + 1)
         .filter(candidate => candidate.date > 0 && candidate.date <= episode.date) : [];
       pending.append(episodeRow(episode, older));
     });
     archived.forEach(episode => listened.append(episodeRow(episode)));
     if (!pending.children.length) empty(pending, 'Nessuna puntata da ascoltare.');
     episodePanel.append(pending);
+    if (remaining.length > limit || catalog?.nextPage) {
+      button(episodePanel, 'Mostra puntate precedenti',
+        control => showOlderEpisodes(show, limit, remaining.length > limit, control),
+        'Mostra puntate precedenti · ' + show.title);
+      episodePanel.lastElementChild.className = 'older-episodes';
+    }
     if (listened.children.length) {
       const archive = details('Puntate ascoltate (' + listened.children.length + ')', savedPanel?.archive ?? false);
       archive.className = 'archive';
@@ -670,7 +725,8 @@ $('search').addEventListener('submit', async event => {
         status('Carico le puntate…');
         try {
           const feed = await readEpisodes(match.feed);
-          state.shows.push({ ...match, episodes: feed.episodes,
+          episodeCatalogs.set(match.feed, feed);
+          state.shows.push({ ...match, episodes: feed.episodes.slice(0, pageSize),
             artwork: match.artwork || feed.artwork, checked: Date.now() });
           save();
           render();

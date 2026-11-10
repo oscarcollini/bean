@@ -153,12 +153,20 @@ body:has(#player:not([hidden]):not(.is-expanded)) main { padding-bottom: calc(6r
 .podcast-list-heading h2 { margin: 0; }
 .podcast-list-heading select { font-size: .88rem; min-height: 2.35rem; }
 
-/* Separate the raised main control from the recessed episode list. */
 #player.is-expanded #toggle {
-  box-shadow: 3px 4px 7px #432c4c58, -3px -3px 6px #ffffff80, inset 0 2px 2px #ffffff38;
+  color: var(--accent);
+  background: linear-gradient(145deg, #d1fa8a, var(--pea) 55%, #a7d74c);
+  border-color: #91b94a;
+  box-shadow:
+    5px 6px 10px #526f3266,
+    -4px -4px 8px #f0ffd399,
+    inset 1px 1px 2px #f2ffd9b3;
 }
 #player.is-expanded #toggle:active {
-  box-shadow: inset 2px 3px 6px #221229a0, inset -1px -1px 3px #ffffff28;
+  background: var(--pea);
+  box-shadow:
+    inset 4px 4px 8px #526f3266,
+    inset -3px -3px 7px #f0ffd3a6;
 }
 .podcast-episodes {
   border: 1px solid var(--line);
@@ -181,3 +189,5 @@ body:has(#player:not([hidden]):not(.is-expanded)) main { padding-bottom: calc(6r
 #episode-notes :is(ul, ol) { padding-inline-start: 1.25rem; list-style: revert; }
 #episode-notes li { display: list-item; padding: 0; border: 0; }
 #episode-info a { color: inherit; text-decoration: underline; }
+
+.older-episodes { display: block; margin: .55rem auto .25rem; }
