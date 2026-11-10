@@ -148,7 +148,9 @@ async function readSpreakerEpisodes(showId) {
       id: 'https://api.spreaker.com/episode/' + id,
       title: String(item.title || 'Puntata').slice(0, 300),
       date: Date.parse(String(item.published_at || '').replace(' ', 'T') + 'Z') || 0,
-      url: audio.href
+      url: audio.href,
+      notes: String(item.description || '').slice(0, 32000),
+      link: webLink(item.site_url || item.permalink, url.href)
     }];
   }).sort((a, b) => b.date - a.date).slice(0, 30);
   if (show.items.length && !episodes.length) throw new Error('Audio Spreaker non disponibile');
@@ -185,6 +187,16 @@ async function readEpisodes(feed) {
 
 function textOf(element, name) {
   return [...element.children].find(child => child.localName === name)?.textContent.trim() || '';
+}
+
+function webLink(source, baseUrl) {
+  if (typeof source !== 'string' || !source.trim()) return '';
+  try {
+    const url = new URL(source, baseUrl);
+    return ['http:', 'https:'].includes(url.protocol) && !url.username && !url.password ? url.href : '';
+  } catch {
+    return '';
+  }
 }
 
 function artworkUrl(source, baseUrl) {
@@ -237,6 +249,8 @@ function parseFeed(bytes, baseUrl) {
         child.localName === 'enclosure' ||
         (child.localName === 'link' && child.getAttribute('rel') === 'enclosure'));
       const source = enclosure?.getAttribute('url') || enclosure?.getAttribute('href');
+      const page = [...item.children].find(child => child.localName === 'link' &&
+        (!child.hasAttribute('rel') || child.getAttribute('rel') === 'alternate'));
       if (!source) return [];
       try {
         const url = new URL(source, baseUrl);
@@ -246,7 +260,10 @@ function parseFeed(bytes, baseUrl) {
           id: (textOf(item, 'guid') || textOf(item, 'id') || url.href).slice(0, 600),
           title: (textOf(item, 'title') || 'Puntata').slice(0, 300),
           date: Date.parse(textOf(item, 'pubDate') || textOf(item, 'published') || textOf(item, 'updated')) || 0,
-          url: url.href
+          url: url.href,
+          notes: (textOf(item, 'encoded') || textOf(item, 'description') ||
+            textOf(item, 'content') || textOf(item, 'summary')).slice(0, 32000),
+          link: webLink(page?.getAttribute('href') || page?.textContent, baseUrl)
         }];
       } catch {
         return [];
@@ -339,6 +356,65 @@ function addToQueue(episode) {
   }
 }
 
+function noteLink(href) {
+  const link = document.createElement('a');
+  link.href = href;
+  link.target = '_blank';
+  link.rel = 'noopener noreferrer';
+  return link;
+}
+
+function appendNoteText(target, text) {
+  let offset = 0;
+  for (const match of text.matchAll(/https?:[^\s<>"']+/gi)) {
+    const address = match[0].replace(/[.,;!?]+$/, '');
+    const href = webLink(address);
+    if (!href) continue;
+    target.append(text.slice(offset, match.index));
+    const link = noteLink(href);
+    link.textContent = address;
+    target.append(link);
+    offset = match.index + address.length;
+  }
+  target.append(text.slice(offset));
+}
+
+function appendNotes(target, nodes, baseUrl, insideLink = false) {
+  const blocks = ['p', 'div', 'li', 'ul', 'ol', 'blockquote', 'h2', 'h3', 'h4'];
+  for (const node of nodes) {
+    if (node.nodeType === Node.TEXT_NODE) {
+      if (insideLink) target.append(node.textContent);
+      else appendNoteText(target, node.textContent);
+      continue;
+    }
+    const tag = node.localName;
+    if (!tag || ['script', 'style', 'template', 'iframe', 'noscript'].includes(tag)) continue;
+    const href = tag === 'a' ? webLink(node.getAttribute('href'), baseUrl) : '';
+    const safeTag = href ? 'a' : blocks.includes(tag) ? tag : tag === 'br' ? 'br' : '';
+    const element = href ? noteLink(href) : safeTag ? document.createElement(safeTag) : target;
+    appendNotes(element, node.childNodes, baseUrl, insideLink || Boolean(href));
+    if (safeTag) target.append(element);
+  }
+}
+
+function showEpisodeInfo(episode) {
+  const notes = $('episode-notes');
+  notes.replaceChildren();
+  const baseUrl = webLink(episode.link, episode.feed) || episode.feed;
+  const template = document.createElement('template');
+  template.innerHTML = typeof episode.notes === 'string' ? episode.notes : '';
+  appendNotes(notes, template.content.childNodes, baseUrl);
+  if (!notes.textContent.trim()) notes.textContent = 'Nessuna descrizione disponibile per questa puntata.';
+
+  const page = $('episode-page');
+  const href = webLink(episode.link, episode.feed);
+  page.hidden = !href;
+  if (href) page.firstElementChild.href = href;
+  else page.firstElementChild.removeAttribute('href');
+  $('episode-info-title').textContent = episode.title;
+  $('episode-info').showModal();
+}
+
 function episodeRow(episode, older = []) {
   const entry = state.listening[episodeKey(episode)];
   const date = episode.date ? new Date(episode.date).toLocaleDateString('it-IT') : '';
@@ -353,6 +429,7 @@ function episodeRow(episode, older = []) {
   const markLabel = entry?.listened ? 'Da ascoltare' : 'Già ascoltato';
   const more = details('⋯', false);
   more.firstChild.setAttribute('aria-label', 'Altre azioni · ' + episode.title);
+  button(more, 'Info puntata', () => showEpisodeInfo(episode), 'Info puntata · ' + episode.title);
   button(more, markLabel, () => markListened(episode, !entry?.listened),
     markLabel + ' · ' + episode.title);
   more.className = 'episode-more';

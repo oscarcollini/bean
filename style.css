@@ -152,3 +152,32 @@ body:has(#player:not([hidden]):not(.is-expanded)) main { padding-bottom: calc(6r
 .podcast-list-heading { justify-content: space-between; flex-wrap: wrap; gap: .45rem; margin: 1.25rem 0 .35rem; }
 .podcast-list-heading h2 { margin: 0; }
 .podcast-list-heading select { font-size: .88rem; min-height: 2.35rem; }
+
+/* Separate the raised main control from the recessed episode list. */
+#player.is-expanded #toggle {
+  box-shadow: 3px 4px 7px #432c4c58, -3px -3px 6px #ffffff80, inset 0 2px 2px #ffffff38;
+}
+#player.is-expanded #toggle:active {
+  box-shadow: inset 2px 3px 6px #221229a0, inset -1px -1px 3px #ffffff28;
+}
+.podcast-episodes {
+  border: 1px solid var(--line);
+  box-shadow: inset 2px 3px 7px #432c4c38, inset -2px -2px 5px #ffffffb0;
+}
+#episode-info {
+  width: min(32rem, calc(100% - 2rem));
+  max-height: 80dvh;
+  padding: 1rem;
+  border: 1px solid var(--line);
+  border-radius: .9rem;
+  background: var(--panel);
+  color: var(--accent);
+  overflow-wrap: anywhere;
+}
+#episode-info::backdrop { background: #432c4c66; }
+#episode-info .heading { justify-content: space-between; align-items: start; margin-bottom: .85rem; }
+#episode-info h2 { margin: 0; }
+#episode-notes { line-height: 1.5; white-space: pre-line; }
+#episode-notes :is(ul, ol) { padding-inline-start: 1.25rem; list-style: revert; }
+#episode-notes li { display: list-item; padding: 0; border: 0; }
+#episode-info a { color: inherit; text-decoration: underline; }
