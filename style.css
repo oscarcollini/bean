@@ -138,7 +138,24 @@ header button { padding-inline: .45rem; }
 #player:not(.is-expanded) #toggle svg { width: 1.6rem; height: 1.6rem; }
 #player:not(.is-expanded) #playing-cover { width: 2.6rem; height: 2.6rem; }
 #player.is-expanded :is(.controls, .timeline), #audio-error { grid-column: 1 / -1; }
-#player.is-expanded .controls { width: 100%; }
+#player.is-expanded {
+  background: var(--accent);
+  color: var(--panel);
+}
+#player.is-expanded .playing,
+#player.is-expanded :is(#playing-show, #audio-error) {
+  color: var(--panel);
+}
+#player.is-expanded .timeline input { accent-color: var(--pea); }
+#player.is-expanded .controls {
+  width: 100%;
+  padding: .5rem .4rem .4rem;
+  border-radius: 1.25rem;
+  background: var(--pea);
+}
+#player.is-expanded :is(.timeline input, .player-actions button):focus-visible {
+  outline-color: var(--pea);
+}
 body:has(#player:not([hidden]):not(.is-expanded)) main { padding-bottom: calc(6rem + env(safe-area-inset-bottom)); }
 
 #resume-list button, #finish-episode { min-width: 2.65rem; }
@@ -162,7 +179,7 @@ body:has(#player:not([hidden]):not(.is-expanded)) main { padding-bottom: calc(6r
     -4px -4px 8px #f0ffd399,
     inset 1px 1px 2px #f2ffd9b3;
 }
-#player.is-expanded #toggle:active {
+#player.is-expanded #toggle:is(.is-playing, :active) {
   background: var(--pea);
   box-shadow:
     inset 4px 4px 8px #526f3266,
