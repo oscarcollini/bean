@@ -1,6 +1,6 @@
-const CACHE = 'bean-shell-pages-19';
-const SHELL = ['./', './index.html', './style.css?v=18', './app.js?v=19', './icon.svg',
-  './icon-192.png', './icon-512.png', './bean.webmanifest'];
+const CACHE = 'bean-shell-pages-20';
+const SHELL = ['./', './index.html', './style.css?v=20', './app.js?v=20', './icon.svg',
+  './icon-192.png', './icon-512.png', './bean.webmanifest?v=20'];
 
 self.addEventListener('install', event => {
   event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(SHELL)).then(() => self.skipWaiting()));
@@ -14,7 +14,8 @@ self.addEventListener('activate', event => {
 
 self.addEventListener('fetch', event => {
   const url = new URL(event.request.url);
-  if (event.request.method !== 'GET' || url.origin !== self.location.origin) return;
+  const scope = new URL(self.registration.scope);
+  if (event.request.method !== 'GET' || url.origin !== scope.origin || !url.pathname.startsWith(scope.pathname)) return;
   if (event.request.mode === 'navigate') {
     event.respondWith(fetch(event.request).catch(() => caches.match('./index.html')));
     return;

@@ -1,3 +1,52 @@
+(() => {
+  const panel = document.getElementById('beanInstallPanel');
+  const button = document.getElementById('beanInstallButton');
+  const status = document.getElementById('beanInstallStatus');
+  const appMode = matchMedia('(display-mode: standalone)');
+  let installPrompt = null;
+  let installedHere = false;
+
+  function updatePanel() {
+    panel.hidden = installedHere || appMode.matches || navigator.standalone === true;
+  }
+
+  window.addEventListener('beforeinstallprompt', event => {
+    event.preventDefault();
+    installPrompt = event;
+    status.textContent = '';
+  });
+  window.addEventListener('appinstalled', () => {
+    installedHere = true;
+    installPrompt = null;
+    updatePanel();
+  });
+  appMode.addEventListener('change', updatePanel);
+  updatePanel();
+
+  button.addEventListener('click', async () => {
+    const prompt = installPrompt;
+    if (!prompt) {
+      status.textContent = 'In Chrome apri il menu ⋮ e scegli «Aggiungi a schermata Home» o «Installa app», se disponibile.';
+      return;
+    }
+    installPrompt = null;
+    button.disabled = true;
+    status.textContent = '';
+    try {
+      await prompt.prompt();
+      const choice = await prompt.userChoice;
+      if (choice.outcome === 'accepted') {
+        installedHere = true;
+        updatePanel();
+      }
+    } catch {
+      status.textContent = 'Il browser non ha aperto la richiesta. Riprova dal menu ⋮.';
+    } finally {
+      button.disabled = false;
+    }
+  });
+})();
+
 'use strict';
 
 const $ = id => document.getElementById(id);
@@ -689,13 +738,10 @@ for (const event of ['play', 'pause', 'ended']) {
     $('toggle').classList.toggle('is-playing', !audio.paused);
     if ('mediaSession' in navigator) navigator.mediaSession.playbackState = state.current ? (audio.paused ? 'paused' : 'playing') : 'none';
     if (event === 'play' && state.current) {
-      const cleared = clearNewEpisode(state.current);
       const key = episodeKey(state.current);
       const queued = state.queue.findIndex(entry => episodeKey(entry) === key);
       if (queued >= 0) {
         state.queue.splice(queued, 1);
-      }
-      if (cleared || queued >= 0) {
         save();
         render();
       }
@@ -710,6 +756,12 @@ for (const event of ['play', 'pause', 'ended']) {
     }
   });
 }
+audio.addEventListener('playing', () => {
+  if (state.current && clearNewEpisode(state.current)) {
+    save();
+    render();
+  }
+});
 audio.addEventListener('error', () => showAudioError('Audio non disponibile per questa puntata.'));
 
 if ('mediaSession' in navigator) {

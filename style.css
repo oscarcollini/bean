@@ -63,7 +63,7 @@ body:has(footer:not([hidden])) main { padding-bottom: calc(17rem + env(safe-area
 
 .cover { width: 2.55rem; height: 2.55rem; border-radius: .55rem; object-fit: cover; vertical-align: middle; flex: none; }
 .podcast-cover { position: relative; display: inline-block; vertical-align: middle; margin: 0 .55rem 0 .4rem; }
-.new-dot { position: absolute; top: -.16rem; right: -.22rem; width: .7rem; height: .7rem; border: 1px solid var(--accent); border-radius: 50%; background: var(--pea); }
+.new-dot { position: absolute; top: -.16rem; right: -.22rem; width: .7rem; height: .7rem; border: 1px solid var(--accent); border-radius: 50%; background: #c42d39; }
 .playing { display: flex; align-items: center; gap: .6rem; }
 .playing > div { min-width: 0; }
 .episode-more summary { font-size: .875rem; padding: .65rem .4rem; }
@@ -115,3 +115,7 @@ body:has(#player:not([hidden]):not(.is-expanded)) main { padding-bottom: calc(6r
 #resume-list button, #finish-episode { min-width: 2.65rem; }
 .player-actions { display: flex; gap: .35rem; }
 #finish-episode { font-weight: 700; font-size: 1.2rem; }
+
+.install-panel { text-align: center; margin: 1.2rem 0; }
+.install-panel p { margin: .45rem 0 0; font-size: .85rem; }
+.install-panel p:empty { display: none; }
