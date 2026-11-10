@@ -149,7 +149,8 @@ header button { padding-inline: .45rem; }
 #player.is-expanded .timeline input { accent-color: var(--pea); }
 #player.is-expanded .controls {
   width: 100%;
-  padding: .5rem .4rem .4rem;
+  max-width: none;
+  padding: .5rem max(.4rem, calc((100% - 23rem) / 2 + .4rem)) .4rem;
   border-radius: 1.25rem;
   background: var(--pea);
 }
