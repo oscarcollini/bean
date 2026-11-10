@@ -131,10 +131,43 @@ async function feedResponse(url) {
   return response;
 }
 
+async function readSpreakerEpisodes(showId) {
+  const url = new URL('https://api.spreaker.com/v2/shows/' + showId + '/episodes');
+  url.searchParams.set('limit', '30');
+  const response = await feedResponse(url);
+  const { response: show } = await response.json();
+  if (!Array.isArray(show?.items)) throw new Error('Risposta Spreaker non valida');
+  const episodes = show.items.flatMap(item => {
+    const id = String(item.episode_id || '');
+    const playback = item.playback_url;
+    if (!/^\d+$/.test(id) || typeof playback !== 'string') return [];
+    const audio = new URL(playback);
+    if (audio.protocol !== 'https:' || audio.username || audio.password) return [];
+    // Match the GUID in Spreaker's RSS so archives, progress and novelty survive.
+    return [{
+      id: 'https://api.spreaker.com/episode/' + id,
+      title: String(item.title || 'Puntata').slice(0, 300),
+      date: Date.parse(String(item.published_at || '').replace(' ', 'T') + 'Z') || 0,
+      url: audio.href
+    }];
+  }).sort((a, b) => b.date - a.date).slice(0, 30);
+  if (show.items.length && !episodes.length) throw new Error('Audio Spreaker non disponibile');
+  return { episodes, artwork: '' };
+}
+
 async function readEpisodes(feed) {
   const source = new URL(feed);
   if (!['http:', 'https:'].includes(source.protocol) || source.username || source.password) {
     throw new Error('Indirizzo del feed non valido');
+  }
+  const spreakerId = ['www.spreaker.com', 'spreaker.com'].includes(source.hostname) &&
+    source.pathname.match(/^\/show\/(\d+)\/episodes\/feed\/?$/)?.[1];
+  if (spreakerId) {
+    try {
+      return await readSpreakerEpisodes(spreakerId);
+    } catch {
+      // The publisher's RSS remains available as a fallback.
+    }
   }
   if (source.protocol === 'https:') {
     try {

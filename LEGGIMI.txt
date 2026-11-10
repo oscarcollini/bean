@@ -44,3 +44,5 @@ compatta per riaprire la vista guida, dove trovi In corso e Coda.
 
 Nel lettore grande, il tasto ✓ archivia la puntata e avvia la prossima
 in coda. In In corso, ✓ archivia solo la puntata selezionata.
+
+Per i podcast ospitati da Spreaker, Bean prova prima la sua API pubblica.
