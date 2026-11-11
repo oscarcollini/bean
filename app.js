@@ -329,25 +329,111 @@ function isListened(episode, show = state.shows.find(show => show.feed === episo
     (!entry?.restored && isBeforeArchiveCutoff(episode, show?.archiveThrough)));
 }
 
+let undoTimer;
+let undoAction;
+const undoBar = $('undo-bar');
+const listeningDialog = $('listening-dialog');
+const player = $('player');
+
+new ResizeObserver(() => {
+  document.documentElement.style.setProperty('--player-height', player.offsetHeight + 'px');
+}).observe(player);
+
+function clearUndo() {
+  clearTimeout(undoTimer);
+  undoBar.hidden = true;
+  undoAction = undefined;
+}
+
+function offerUndo(message, action) {
+  clearUndo();
+  (listeningDialog.open ? listeningDialog : document.body).append(undoBar);
+  $('undo-message').textContent = message;
+  undoBar.hidden = false;
+  undoAction = action;
+  undoTimer = setTimeout(clearUndo, 5000);
+}
+
+listeningDialog.addEventListener('close', () => document.body.append(undoBar));
+$('undo-button').onclick = () => {
+  const action = undoAction;
+  clearUndo();
+  action?.();
+};
+
+function archiveWithUndo(episode, message, apply, reopenPlayer = false) {
+  const show = state.shows.find(show => show.feed === episode.feed);
+  const cutoff = show?.archiveThrough;
+  const newIds = [...(show?.newIds || [])];
+  const queue = [...state.queue];
+  const before = { ...state.listening };
+  const current = state.current;
+  const currentPosition = current?.position;
+  const wasReplaying = replayingArchived;
+  apply();
+  const changedCurrent = current?.position !== currentPosition || replayingArchived !== wasReplaying;
+  const updatedCutoff = show?.archiveThrough;
+  const updatedEntries = Object.entries(state.listening).filter(([key, entry]) => before[key] !== entry);
+  const removedNewIds = newIds.filter(id => !show?.newIds?.includes(id));
+  const remainingKeys = new Set(state.queue.map(episodeKey));
+  const removedQueue = queue.filter(entry => !remainingKeys.has(episodeKey(entry)));
+
+  offerUndo(message, () => {
+    for (const [key, updated] of updatedEntries) {
+      if (state.listening[key] !== updated) continue;
+      if (before[key]) state.listening[key] = before[key];
+      else delete state.listening[key];
+    }
+    if (changedCurrent && state.current === current && current?.position === 0) {
+      current.position = currentPosition;
+      replayingArchived = wasReplaying;
+    }
+    if (show && state.shows.includes(show)) {
+      if (show.archiveThrough === updatedCutoff) show.archiveThrough = cutoff;
+      const recent = new Set(show.episodes.map(entry => entry.id));
+      const restoredIds = removedNewIds.filter(id => recent.has(id) &&
+        episodeKey({ feed: show.feed, id }) !== (state.current && !audio.paused ? episodeKey(state.current) : ''));
+      show.newIds = [...new Set([...(show.newIds || []), ...restoredIds])];
+      for (const entry of removedQueue) {
+        const key = episodeKey(entry);
+        if (state.queue.some(item => episodeKey(item) === key) ||
+            (state.current && episodeKey(state.current) === key && !audio.paused)) continue;
+        const next = queue.slice(queue.indexOf(entry) + 1);
+        const index = state.queue.findIndex(item => next.some(candidate => episodeKey(candidate) === episodeKey(item)));
+        state.queue.splice(index < 0 ? state.queue.length : index, 0, entry);
+      }
+    }
+    if (reopenPlayer && !state.current && current) {
+      openEpisode(current, false);
+      setPlayerExpanded(true);
+    }
+    save();
+    render();
+  });
+}
+
 function archiveThrough(episode) {
   const show = state.shows.find(show => show.feed === episode.feed);
   if (!show || !episode.date || !confirm('Archiviare questa puntata di ' + episode.show +
       ' e tutte quelle pubblicate fino alla stessa data e ora, comprese quelle che Bean caricherà in futuro?')) return;
 
-  show.archiveThrough = Math.max(show.archiveThrough || 0, episode.date);
-  for (const entry of Object.values(state.listening)) {
-    if (entry.feed === show.feed && isBeforeArchiveCutoff(entry, episode.date) &&
-        (!entry.listened || entry.position > 0)) {
-      setListened(entry, true);
+  if (state.current?.feed === show.feed && isBeforeArchiveCutoff(state.current, episode.date)) rememberPosition();
+  archiveWithUndo(episode, 'Puntate archiviate', () => {
+    show.archiveThrough = Math.max(show.archiveThrough || 0, episode.date);
+    for (const entry of Object.values(state.listening)) {
+      if (entry.feed === show.feed && isBeforeArchiveCutoff(entry, episode.date) &&
+          (!entry.listened || entry.position > 0)) {
+        setListened(entry, true);
+      }
     }
-  }
-  if (state.current?.feed === show.feed && isBeforeArchiveCutoff(state.current, episode.date)) {
-    setListened(state.current, true);
-  }
-  state.queue = state.queue.filter(entry => entry.feed !== show.feed || !isListened(entry, show));
-  const catalog = episodeCatalogs.get(show.feed)?.episodes ?? show.episodes;
-  const archivedIds = new Set(catalog.filter(entry => isListened({ ...entry, feed: show.feed }, show)).map(entry => entry.id));
-  show.newIds = (show.newIds || []).filter(id => !archivedIds.has(id));
+    if (state.current?.feed === show.feed && isBeforeArchiveCutoff(state.current, episode.date)) {
+      setListened(state.current, true);
+    }
+    state.queue = state.queue.filter(entry => entry.feed !== show.feed || !isListened(entry, show));
+    const catalog = episodeCatalogs.get(show.feed)?.episodes ?? show.episodes;
+    const archivedIds = new Set(catalog.filter(entry => isListened({ ...entry, feed: show.feed }, show)).map(entry => entry.id));
+    show.newIds = (show.newIds || []).filter(id => !archivedIds.has(id));
+  });
   save();
   render();
 }
@@ -392,8 +478,13 @@ function setListened(episode, listened) {
   }
 }
 
-function markListened(episode, listened) {
-  setListened(episode, listened);
+function markListened(episode, listened, manual = true) {
+  if (listened && manual) {
+    if (state.current && episodeKey(state.current) === episodeKey(episode)) rememberPosition();
+    archiveWithUndo(episode, 'Puntata archiviata', () => setListened(episode, true));
+  } else {
+    setListened(episode, listened);
+  }
   save();
   render();
 }
@@ -473,10 +564,23 @@ function episodeRow(episode, show) {
   const isNew = state.shows.find(show => show.feed === episode.feed)?.newIds?.includes(episode.id);
   const item = row(episode.title, [isNew ? 'Nuova' : '', date, progress].filter(Boolean).join(' · '));
   item.className = 'episode';
+  const labels = item.firstElementChild;
   const actions = document.createElement('div');
   actions.className = 'episode-actions';
   const playLabel = entry?.position > 0 ? 'Riprendi' : listened ? 'Riascolta' : 'Ascolta';
-  button(actions, '▶', () => selectEpisode(episode), playLabel + ' ' + episode.title);
+  const play = document.createElement('button');
+  play.type = 'button';
+  play.className = 'episode-play';
+  play.setAttribute('aria-label', playLabel + ' ' + episode.title);
+  play.onclick = () => selectEpisode(episode);
+  const icon = document.createElement('span');
+  icon.className = 'episode-play-icon';
+  icon.setAttribute('aria-hidden', 'true');
+  icon.textContent = '▶';
+  const text = document.createElement('span');
+  text.append(...labels.childNodes);
+  play.append(text, icon);
+  labels.replaceWith(play);
   const markLabel = listened ? 'Da ascoltare' : 'Già ascoltato';
   const more = details('⋯', false);
   more.firstChild.setAttribute('aria-label', 'Altre azioni · ' + episode.title);
@@ -523,7 +627,7 @@ function renderShortcuts() {
     .filter(entry => entry.position > 0 &&
       followed.has(entry.feed) && episodeKey(entry) !== currentKey)
     .sort((a, b) => (b.touched || 0) - (a.touched || 0));
-  $('resume-home').hidden = !inProgress.length || !$('player').hidden;
+  $('listening-home').hidden = (!inProgress.length && !state.queue.length) || !player.hidden;
   $('resume-list').replaceChildren();
   if (!inProgress.length) empty($('resume-list'), 'Nessuna puntata da riprendere.');
   for (const episode of inProgress) {
@@ -532,7 +636,6 @@ function renderShortcuts() {
     button(item, '✓', () => markListened(episode, true), 'Segna come ascoltato · ' + episode.title);
     $('resume-list').append(item);
   }
-  $('queue-home').hidden = !state.queue.length || !$('player').hidden;
   $('queue-list').replaceChildren();
   if (!state.queue.length) empty($('queue-list'), 'La coda è vuota.');
   state.queue.forEach((episode, index) => {
@@ -646,7 +749,11 @@ function render() {
     const author = document.createElement('small');
     author.textContent = show.author;
     header.append(author);
-    button(header, 'Smetti di seguire', () => {
+    const menu = details('⋯', false);
+    menu.className = 'podcast-more';
+    menu.firstChild.setAttribute('aria-label', 'Opzioni · ' + show.title);
+    button(menu, 'Smetti di seguire', () => {
+      if (!confirm('Smettere di seguire «' + show.title + '»?')) return;
       state.shows = state.shows.filter(candidate => candidate !== show);
       episodeCatalogs.delete(show.feed);
       visibleEpisodes.delete(show.feed);
@@ -655,6 +762,7 @@ function render() {
       save();
       render();
     }, 'Smetti di seguire ' + show.title);
+    header.append(menu);
     episodePanel.append(header);
 
     const episodes = new Map();
@@ -828,9 +936,7 @@ function play() {
 }
 
 function selectEpisode(episode) {
-  for (const id of ['queue-dialog', 'resume-dialog']) {
-    if ($(id).open) $(id).close();
-  }
+  if (listeningDialog.open) listeningDialog.close();
   openEpisode(episode);
   setPlayerExpanded(true);
 }
@@ -913,12 +1019,20 @@ $('player-view').onclick = () => {
   setPlayerExpanded(true);
   $('toggle').focus();
 };
-$('resume-home').onclick = $('resume-player').onclick = () => $('resume-dialog').showModal();
-$('queue-home').onclick = $('queue-player').onclick = () => $('queue-dialog').showModal();
+$('listening-home').onclick = $('listening-player').onclick = () => listeningDialog.showModal();
+$('info-player').onclick = () => {
+  const episode = state.current;
+  if (!episode) return;
+  const catalog = episodeCatalogs.get(episode.feed)?.episodes ??
+    state.shows.find(show => show.feed === episode.feed)?.episodes;
+  const latest = catalog?.find(item => item.id === episode.id);
+  showEpisodeInfo(latest ? { ...episode, ...latest } : episode);
+};
 
 function finishCurrentEpisode() {
   if (!state.current) return;
-  setListened(state.current, true);
+  rememberPosition();
+  archiveWithUndo(state.current, 'Puntata archiviata', () => setListened(state.current, true), true);
   if (state.queue.length) {
     openEpisode(state.queue[0]);
   } else {
@@ -979,7 +1093,7 @@ for (const event of ['play', 'pause', 'ended']) {
       }
     }
     if (event === 'ended' && state.current) {
-      markListened(state.current, true);
+      markListened(state.current, true, false);
       if (state.queue.length) openEpisode(state.queue[0]);
     }
     if (event === 'pause') {

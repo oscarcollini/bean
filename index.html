@@ -7,8 +7,8 @@
 <link rel="manifest" href="bean.webmanifest?v=20">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-192.png">
-<link rel="stylesheet" href="style.css?v=30">
-<header><img src="icon.svg" alt=""><h1>Bean</h1><button id="resume-home" type="button" hidden>In corso</button><button id="queue-home" type="button" hidden>Coda</button><button id="refresh" type="button">Aggiorna</button></header>
+<link rel="stylesheet" href="style.css?v=31">
+<header><img src="icon.svg" alt=""><h1>Bean</h1><button id="listening-home" type="button" hidden>Ascolto</button><button id="refresh" type="button">Aggiorna</button></header>
 <main>
   <form id="search"><label class="sr" for="query">Cerca un podcast</label>
     <div class="search-field">
@@ -37,15 +37,12 @@
     <button id="beanInstallButton" type="button">Installa Bean</button>
     <p id="beanInstallStatus" role="status"></p>
   </div>
-  <p class="colophon">Bean v0.30 · Oscar Collini fecit · <a href="https://creativecommons.org/licenses/by-sa/4.0/deed.it" target="_blank" rel="noopener">CC BY-SA 4.0</a></p>
+  <p class="colophon">Bean v0.31 · Oscar Collini fecit · <a href="https://creativecommons.org/licenses/by-sa/4.0/deed.it" target="_blank" rel="noopener">CC BY-SA 4.0</a></p>
 </main>
-<dialog id="resume-dialog" aria-labelledby="resume-title">
-  <div class="heading"><h2 id="resume-title">In corso</h2><form method="dialog"><button>Chiudi</button></form></div>
-  <ul id="resume-list"></ul>
-</dialog>
-<dialog id="queue-dialog" aria-labelledby="queue-title">
-  <div class="heading"><h2 id="queue-title">Coda</h2><form method="dialog"><button>Chiudi</button></form></div>
-  <ul id="queue-list"></ul>
+<dialog id="listening-dialog" aria-labelledby="listening-title">
+  <div class="heading"><h2 id="listening-title">Ascolto</h2><form method="dialog"><button>Chiudi</button></form></div>
+  <section aria-labelledby="queue-title"><h3 id="queue-title">Coda</h3><ul id="queue-list"></ul></section>
+  <section aria-labelledby="resume-title"><h3 id="resume-title">In corso</h3><ul id="resume-list"></ul></section>
 </dialog>
 <dialog id="episode-info" aria-labelledby="episode-info-title">
   <div class="heading">
@@ -61,8 +58,8 @@
     <span class="playing-labels"><strong id="playing-title"></strong><small id="playing-show"></small></span>
   </button>
   <div class="player-actions">
-    <button id="resume-player" type="button">In corso</button>
-    <button id="queue-player" type="button">Coda</button>
+    <button id="info-player" type="button" aria-label="Info puntata">ⓘ</button>
+    <button id="listening-player" type="button">Ascolto</button>
     <button id="finish-episode" type="button" aria-label="Segna come ascoltato e passa al prossimo episodio in coda">✓</button>
   </div>
   <div class="timeline"><span id="elapsed">0:00</span><input id="position" type="range" min="0" max="1" step="1" value="0" aria-label="Posizione di riproduzione" disabled><span id="duration">–:––</span></div>
@@ -80,5 +77,6 @@
   <small id="audio-error" role="status" hidden></small>
   <audio id="audio" preload="none"></audio>
 </footer>
-<script src="app.js?v=30" defer></script>
+<div id="undo-bar" hidden><span id="undo-message" role="status"></span><button id="undo-button" type="button">Annulla</button></div>
+<script src="app.js?v=31" defer></script>
 </html>

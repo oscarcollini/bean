@@ -108,7 +108,7 @@ body:has(footer:not([hidden])) main { padding-bottom: calc(17rem + env(safe-area
 .podcast .archive > summary { font-size: .875rem; font-weight: 500; }
 .archive li:last-child { border-bottom: 0; }
 .episode { display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: .45rem; align-items: start; }
-.episode > div:first-child strong { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
+.episode-play strong { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
 .episode-actions { display: flex; flex-wrap: nowrap; align-items: start; margin-top: 0; }
 .episode-more { position: relative; }
 .episode-more > summary { display: grid; place-items: center; min-width: 2.65rem; min-height: 2.65rem; padding: 0; border: 1px solid var(--line); border-radius: .7rem; font-size: 1.2rem; }
@@ -116,17 +116,57 @@ body:has(footer:not([hidden])) main { padding-bottom: calc(17rem + env(safe-area
 .episode-more[open] > :not(summary) { width: max-content; max-width: min(65vw, 18rem); margin: .35rem 0 0 auto; }
 .episode-more[open] { display: flex; flex-direction: column; align-items: flex-end; }
 .episode-more .archive-action button { border: 0; background: transparent; font-size: .75rem; text-decoration: underline; padding-inline: .25rem; }
-.episode-actions > button { width: 2.65rem; padding-inline: 0; }
+li .episode-play {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: .45rem;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  text-align: left;
+}
+.episode-play-icon {
+  display: grid;
+  place-items: center;
+  width: 2.65rem;
+  min-height: 2.65rem;
+  border: 1px solid var(--line);
+  border-radius: .7rem;
+  background: var(--panel);
+}
+.episode:has(.episode-more[open]) .episode-play { grid-column: 1 / -1; }
+.podcast-more { position: relative; margin-left: auto; }
+.podcast-more > summary {
+  display: grid;
+  place-items: center;
+  width: 2.65rem;
+  min-height: 2.65rem;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: .7rem;
+  font-size: 1.2rem;
+}
+.podcast-more > button {
+  position: absolute;
+  z-index: 2;
+  right: 0;
+  top: calc(100% + .25rem);
+  white-space: nowrap;
+}
 
-#resume-home, #queue-home { margin-left: auto; }
-header :is(#resume-home, #queue-home):not([hidden]) ~ button { margin-left: 0; }
+#listening-home { margin-left: auto; }
+header #listening-home:not([hidden]) ~ button { margin-left: 0; }
 header button { padding-inline: .45rem; }
 .player-actions button { padding-inline: .45rem; }
 .player-actions { white-space: nowrap; }
-:is(#queue-dialog, #resume-dialog) { width: min(32rem, calc(100% - 2rem)); max-height: 75dvh; padding: 1rem; border: 1px solid var(--line); border-radius: .9rem; background: var(--panel); color: var(--accent); }
-:is(#queue-dialog, #resume-dialog)::backdrop { background: #432c4c66; }
-:is(#queue-dialog, #resume-dialog) .heading { justify-content: space-between; }
-:is(#queue-dialog, #resume-dialog) h2 { margin: 0; }
+#listening-dialog { width: min(32rem, calc(100% - 2rem)); max-height: 75dvh; padding: 1rem; border: 1px solid var(--line); border-radius: .9rem; background: var(--panel); color: var(--accent); }
+#listening-dialog::backdrop { background: #432c4c66; }
+#listening-dialog .heading { justify-content: space-between; }
+#listening-dialog h2 { margin: 0; }
+#listening-dialog h3 { margin: .8rem 0 0; font-size: 1rem; }
 
 #player { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: .35rem .55rem; align-items: center; }
 #player .playing { min-width: 0; border: 0; background: transparent; padding: 0; text-align: left; }
@@ -209,3 +249,24 @@ body:has(#player:not([hidden]):not(.is-expanded)) main { padding-bottom: calc(6r
 #episode-info a { color: inherit; text-decoration: underline; }
 
 .older-episodes { display: block; margin: .55rem auto .25rem; }
+
+#info-player { min-width: 2.65rem; font-weight: 700; }
+#undo-bar {
+  position: fixed;
+  z-index: 10;
+  left: 50%;
+  bottom: calc(.55rem + max(var(--player-height, 0px), env(safe-area-inset-bottom)));
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .75rem;
+  width: min(28rem, calc(100% - 2rem));
+  padding: .45rem .55rem .45rem .8rem;
+  border: 1px solid var(--line);
+  border-radius: .8rem;
+  color: var(--panel);
+  background: var(--accent);
+}
+#listening-dialog #undo-bar { bottom: calc(.55rem + env(safe-area-inset-bottom)); }
+#undo-button { font-weight: 700; }
