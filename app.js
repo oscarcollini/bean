@@ -556,7 +556,7 @@ function showEpisodeInfo(episode) {
   $('episode-info').showModal();
 }
 
-function episodeRow(episode, show) {
+function episodeRow(episode, show, menuOpen) {
   const listened = isListened(episode, show);
   const entry = state.listening[episodeKey(episode)];
   const date = episode.date ? new Date(episode.date).toLocaleDateString('it-IT') : '';
@@ -582,7 +582,8 @@ function episodeRow(episode, show) {
   play.append(text, icon);
   labels.replaceWith(play);
   const markLabel = listened ? 'Da ascoltare' : 'Già ascoltato';
-  const more = details('⋯', false);
+  const more = details('⋯', menuOpen);
+  more.dataset.episodeId = episode.id;
   more.firstChild.setAttribute('aria-label', 'Altre azioni · ' + episode.title);
   button(more, 'Info puntata', () => showEpisodeInfo(episode), 'Info puntata · ' + episode.title);
   button(more, markLabel, () => markListened(episode, !listened),
@@ -708,11 +709,22 @@ async function showOlderEpisodes(show, limits, limit, hasMoreLocally, control) {
   render();
 }
 
-function render() {
+function podcastPanelState(panel, preserveMenus) {
+  return {
+    open: panel.open,
+    archive: panel.querySelector('.archive')?.open,
+    menu: preserveMenus && Boolean(panel.querySelector('.podcast-more[open]')),
+    episodeMenus: new Set(preserveMenus
+      ? [...panel.querySelectorAll('.episode-more[open]')].map(menu => menu.dataset.episodeId)
+      : [])
+  };
+}
+
+function render(preserveMenus = false) {
   renderShortcuts();
   const following = $('following');
   const oldPanels = new Map([...following.querySelectorAll('details[data-feed]')]
-    .map(panel => [panel.dataset.feed, { open: panel.open, archive: panel.querySelector('.archive')?.open }]));
+    .map(panel => [panel.dataset.feed, podcastPanelState(panel, preserveMenus)]));
   following.replaceChildren();
 
   if (!state.shows.length) {
@@ -749,7 +761,7 @@ function render() {
     const author = document.createElement('small');
     author.textContent = show.author;
     header.append(author);
-    const menu = details('⋯', false);
+    const menu = details('⋯', savedPanel?.menu ?? false);
     menu.className = 'podcast-more';
     menu.firstChild.setAttribute('aria-label', 'Opzioni · ' + show.title);
     button(menu, 'Smetti di seguire', () => {
@@ -788,8 +800,12 @@ function render() {
     const olderInArchive = Boolean(catalog?.nextPage && show.archiveThrough &&
       catalog.episodes.some(episode => isBeforeArchiveCutoff(episode, show.archiveThrough)));
     const olderInPending = Boolean(catalog?.nextPage && !olderInArchive);
-    for (const episode of remaining.slice(0, limit)) pending.append(episodeRow(episode, show));
-    for (const episode of archived.slice(0, archiveLimit)) listened.append(episodeRow(episode, show));
+    for (const episode of remaining.slice(0, limit)) {
+      pending.append(episodeRow(episode, show, savedPanel?.episodeMenus.has(episode.id) ?? false));
+    }
+    for (const episode of archived.slice(0, archiveLimit)) {
+      listened.append(episodeRow(episode, show, savedPanel?.episodeMenus.has(episode.id) ?? false));
+    }
     if (!pending.children.length) empty(pending, 'Nessuna puntata da ascoltare.');
     episodePanel.append(pending);
     if (remaining.length > limit || olderInPending) {
@@ -838,7 +854,7 @@ async function updateShows(manual = false, startup = false) {
       }
       show.checked = Date.now();
       save();
-      render();
+      render(true);
     }
     if (manual || failures) {
       status(failures ? `Feed non raggiungibili: ${failures} su ${shows.length}.` : 'Puntate aggiornate.');
@@ -1089,7 +1105,7 @@ for (const event of ['play', 'pause', 'ended']) {
       if (queued >= 0) {
         state.queue.splice(queued, 1);
         save();
-        render();
+        render(true);
       }
     }
     if (event === 'ended' && state.current) {
@@ -1098,14 +1114,14 @@ for (const event of ['play', 'pause', 'ended']) {
     }
     if (event === 'pause') {
       rememberPosition();
-      render();
+      render(true);
     }
   });
 }
 audio.addEventListener('playing', () => {
   if (state.current && clearNewEpisode(state.current)) {
     save();
-    render();
+    render(true);
   }
 });
 audio.addEventListener('error', () => showAudioError('Audio non disponibile per questa puntata.'));
