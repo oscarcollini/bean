@@ -54,6 +54,7 @@ const audio = $('audio');
 const pageSize = 30;
 const episodeCatalogs = new Map();
 const visibleEpisodes = new Map();
+const visibleArchived = new Map();
 const loadingOlder = new Set();
 const interval = 30 * 60 * 1000;
 const storageKey = 'bean-library-v1';
@@ -318,6 +319,39 @@ function episodeKey({ feed, id }) {
   return JSON.stringify([feed, id]);
 }
 
+function isBeforeArchiveCutoff(episode, cutoff) {
+  return episode.date > 0 && episode.date <= cutoff;
+}
+
+function isListened(episode, show = state.shows.find(show => show.feed === episode.feed)) {
+  const entry = state.listening[episodeKey(episode)];
+  return Boolean(entry?.listened ||
+    (!entry?.restored && isBeforeArchiveCutoff(episode, show?.archiveThrough)));
+}
+
+function archiveThrough(episode) {
+  const show = state.shows.find(show => show.feed === episode.feed);
+  if (!show || !episode.date || !confirm('Archiviare questa puntata di ' + episode.show +
+      ' e tutte quelle pubblicate fino alla stessa data e ora, comprese quelle che Bean caricherà in futuro?')) return;
+
+  show.archiveThrough = Math.max(show.archiveThrough || 0, episode.date);
+  for (const entry of Object.values(state.listening)) {
+    if (entry.feed === show.feed && isBeforeArchiveCutoff(entry, episode.date) &&
+        (!entry.listened || entry.position > 0)) {
+      setListened(entry, true);
+    }
+  }
+  if (state.current?.feed === show.feed && isBeforeArchiveCutoff(state.current, episode.date)) {
+    setListened(state.current, true);
+  }
+  state.queue = state.queue.filter(entry => entry.feed !== show.feed || !isListened(entry, show));
+  const catalog = episodeCatalogs.get(show.feed)?.episodes ?? show.episodes;
+  const archivedIds = new Set(catalog.filter(entry => isListened({ ...entry, feed: show.feed }, show)).map(entry => entry.id));
+  show.newIds = (show.newIds || []).filter(id => !archivedIds.has(id));
+  save();
+  render();
+}
+
 function clearNewEpisode(episode) {
   const show = state.shows.find(show => show.feed === episode.feed);
   if (!show?.newIds?.includes(episode.id)) return false;
@@ -333,19 +367,21 @@ function updateFeed(show, feed) {
   const newIds = new Set(show.newIds || []);
   for (const episode of recent) {
     if (!previousIds.has(episode.id) && episode.date >= latestDate &&
-        !state.listening[episodeKey({ ...episode, feed: show.feed })]) {
+        !state.listening[episodeKey({ ...episode, feed: show.feed })] &&
+        !isListened({ ...episode, feed: show.feed }, show)) {
       newIds.add(episode.id);
     }
   }
   show.episodes = recent;
-  show.newIds = recent.filter(episode => newIds.has(episode.id)).map(episode => episode.id);
+  show.newIds = recent.filter(episode => newIds.has(episode.id) &&
+    !isListened({ ...episode, feed: show.feed }, show)).map(episode => episode.id);
   show.artwork ||= feed.artwork;
 }
 
 function setListened(episode, listened) {
   const key = episodeKey(episode);
   const { position = 0 } = state.listening[key] || {};
-  state.listening[key] = { ...episode, listened, position: listened ? 0 : position };
+  state.listening[key] = { ...episode, listened, restored: !listened, position: listened ? 0 : position };
   if (state.current && episodeKey(state.current) === key && listened) {
     state.current.position = 0;
     replayingArchived = false;
@@ -429,7 +465,8 @@ function showEpisodeInfo(episode) {
   $('episode-info').showModal();
 }
 
-function episodeRow(episode, older = []) {
+function episodeRow(episode, show) {
+  const listened = isListened(episode, show);
   const entry = state.listening[episodeKey(episode)];
   const date = episode.date ? new Date(episode.date).toLocaleDateString('it-IT') : '';
   const progress = entry?.position >= 1 ? 'A ' + clock(entry.position) : '';
@@ -438,16 +475,16 @@ function episodeRow(episode, older = []) {
   item.className = 'episode';
   const actions = document.createElement('div');
   actions.className = 'episode-actions';
-  const playLabel = entry?.position > 0 ? 'Riprendi' : entry?.listened ? 'Riascolta' : 'Ascolta';
+  const playLabel = entry?.position > 0 ? 'Riprendi' : listened ? 'Riascolta' : 'Ascolta';
   button(actions, '▶', () => selectEpisode(episode), playLabel + ' ' + episode.title);
-  const markLabel = entry?.listened ? 'Da ascoltare' : 'Già ascoltato';
+  const markLabel = listened ? 'Da ascoltare' : 'Già ascoltato';
   const more = details('⋯', false);
   more.firstChild.setAttribute('aria-label', 'Altre azioni · ' + episode.title);
   button(more, 'Info puntata', () => showEpisodeInfo(episode), 'Info puntata · ' + episode.title);
-  button(more, markLabel, () => markListened(episode, !entry?.listened),
+  button(more, markLabel, () => markListened(episode, !listened),
     markLabel + ' · ' + episode.title);
   more.className = 'episode-more';
-  if (!entry?.listened) {
+  if (!listened) {
     const queued = state.queue.some(candidate => episodeKey(candidate) === episodeKey(episode));
     button(more, queued ? 'Togli dalla coda' : 'In coda', () => {
       if (!queued) {
@@ -458,18 +495,12 @@ function episodeRow(episode, older = []) {
       save();
       render();
     });
-    if (older.length) {
-      const secondary = document.createElement('div');
-      secondary.className = 'archive-action';
-      button(secondary, 'Archivia fino a qui', () => {
-        const batch = [episode, ...older];
-        if (!confirm('Archiviare ' + batch.length + ' puntate di ' + episode.show + '?')) return;
-        batch.forEach(candidate => setListened(candidate, true));
-        save();
-        render();
-      });
-      more.append(secondary);
-    }
+  }
+  if (episode.date) {
+    const secondary = document.createElement('div');
+    secondary.className = 'archive-action';
+    button(secondary, 'Archivia fino a qui', () => archiveThrough(episode));
+    more.append(secondary);
   }
   actions.append(more);
   item.append(actions);
@@ -543,12 +574,13 @@ function orderedPodcasts() {
   return [...state.shows].sort((a, b) => days.get(b) - days.get(a) || compareTitle(a, b));
 }
 
-async function showOlderEpisodes(show, limit, hasMoreLocally, control) {
+async function showOlderEpisodes(show, limits, limit, hasMoreLocally, control) {
   const catalog = episodeCatalogs.get(show.feed);
   if (!hasMoreLocally && catalog?.nextPage) {
     if (loadingOlder.has(show.feed)) return;
     loadingOlder.add(show.feed);
     control.disabled = true;
+    const label = control.textContent;
     control.textContent = 'Carico le puntate…';
     try {
       const page = await readSpreakerEpisodes(new URL(catalog.nextPage));
@@ -566,10 +598,10 @@ async function showOlderEpisodes(show, limit, hasMoreLocally, control) {
     } finally {
       loadingOlder.delete(show.feed);
       control.disabled = false;
-      control.textContent = 'Mostra puntate precedenti';
+      control.textContent = label;
     }
   }
-  visibleEpisodes.set(show.feed, limit + pageSize);
+  limits.set(show.feed, limit + pageSize);
   render();
 }
 
@@ -618,6 +650,7 @@ function render() {
       state.shows = state.shows.filter(candidate => candidate !== show);
       episodeCatalogs.delete(show.feed);
       visibleEpisodes.delete(show.feed);
+      visibleArchived.delete(show.feed);
       state.queue = state.queue.filter(episode => episode.feed !== show.feed);
       save();
       render();
@@ -637,28 +670,36 @@ function render() {
     const pending = document.createElement('ul');
     const listened = document.createElement('ul');
     const ordered = [...episodes.values()].sort((a, b) => b.date - a.date);
-    const remaining = ordered.filter(episode => !state.listening[episodeKey(episode)]?.listened);
-    const archived = ordered.filter(episode => state.listening[episodeKey(episode)]?.listened);
+    const remaining = [];
+    const archived = [];
+    for (const episode of ordered) {
+      (isListened(episode, show) ? archived : remaining).push(episode);
+    }
     const limit = visibleEpisodes.get(show.feed) ?? pageSize;
-    const visible = remaining.slice(0, limit);
-    visible.forEach((episode, index) => {
-      const older = episode.date ? visible.slice(index + 1)
-        .filter(candidate => candidate.date > 0 && candidate.date <= episode.date) : [];
-      pending.append(episodeRow(episode, older));
-    });
-    archived.forEach(episode => listened.append(episodeRow(episode)));
+    const archiveLimit = visibleArchived.get(show.feed) ?? pageSize;
+    const olderInArchive = Boolean(catalog?.nextPage && show.archiveThrough &&
+      catalog.episodes.some(episode => isBeforeArchiveCutoff(episode, show.archiveThrough)));
+    const olderInPending = Boolean(catalog?.nextPage && !olderInArchive);
+    for (const episode of remaining.slice(0, limit)) pending.append(episodeRow(episode, show));
+    for (const episode of archived.slice(0, archiveLimit)) listened.append(episodeRow(episode, show));
     if (!pending.children.length) empty(pending, 'Nessuna puntata da ascoltare.');
     episodePanel.append(pending);
-    if (remaining.length > limit || catalog?.nextPage) {
+    if (remaining.length > limit || olderInPending) {
       button(episodePanel, 'Mostra puntate precedenti',
-        control => showOlderEpisodes(show, limit, remaining.length > limit, control),
+        control => showOlderEpisodes(show, visibleEpisodes, limit, remaining.length > limit, control),
         'Mostra puntate precedenti · ' + show.title);
       episodePanel.lastElementChild.className = 'older-episodes';
     }
-    if (listened.children.length) {
-      const archive = details('Puntate ascoltate (' + listened.children.length + ')', savedPanel?.archive ?? false);
+    if (archived.length || olderInArchive) {
+      const archive = details('Puntate archiviate (' + archived.length + ')', savedPanel?.archive ?? false);
       archive.className = 'archive';
       archive.append(listened);
+      if (archived.length > archiveLimit || olderInArchive) {
+        button(archive, 'Mostra altre puntate archiviate',
+          control => showOlderEpisodes(show, visibleArchived, archiveLimit, archived.length > archiveLimit, control),
+          'Mostra altre puntate archiviate · ' + show.title);
+        archive.lastElementChild.className = 'older-episodes';
+      }
       episodePanel.append(archive);
     }
     podcast.append(episodePanel);
@@ -766,10 +807,10 @@ function rememberPosition() {
   if (!Number.isFinite(position) || (position === 0 && (audio.readyState === 0 || resumeAt > 0))) return;
   lastSavedPosition = position;
   const key = episodeKey(state.current);
-  const listened = Boolean(state.listening[key]?.listened);
+  const listened = isListened(state.current);
   if (listened && !replayingArchived) return;
   state.current.position = lastSavedPosition;
-  state.listening[key] = { ...state.current, listened, touched: Date.now() };
+  state.listening[key] = { ...state.current, listened, restored: state.listening[key]?.restored, touched: Date.now() };
   save();
 }
 
@@ -779,7 +820,7 @@ function showAudioError(message = '') {
 }
 
 function play() {
-  if (state.current) replayingArchived = Boolean(state.listening[episodeKey(state.current)]?.listened);
+  if (state.current) replayingArchived = isListened(state.current);
   showAudioError();
   audio.play().catch(error => {
     if (error.name !== 'AbortError') showAudioError('Riproduzione non disponibile. Tocca Play per riprovare.');
