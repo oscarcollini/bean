@@ -1,6 +1,6 @@
-const CACHE = 'bean-shell-pages-35';
-const SHELL = ['./locale.js?v=035', './bean-en.webmanifest?v=035', './', './index.html', './archivio.html', './style.css?v=35', './app.js?v=35', './icon.svg',
-  './icon-192.png', './icon-512.png', './bean.webmanifest?v=035'];
+const CACHE = 'bean-shell-pages-36';
+const SHELL = ['./locale.js?v=036', './bean-en.webmanifest?v=036', './', './index.html', './archivio.html', './style.css?v=36', './app.js?v=36', './icon.svg',
+  './icon-192.png', './icon-512.png', './bean.webmanifest?v=036'];
 
 self.addEventListener('install', event => {
   event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(SHELL)).then(() => self.skipWaiting()));

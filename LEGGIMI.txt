@@ -58,3 +58,8 @@ Aprilo dallo stesso indirizzo GitHub Pages, non come file HTML locale.
   ordinamento. Il ripristino sostituisce l’archivio corrente dopo conferma.
   È compatibile anche con la copia JSON prodotta da Controlla archivio.
 - Controlla archivio rimane disponibile nel pannello Preferenze.
+
+0.36 — La × chiude risultati e finestre. «Smetti di seguire» è visibile
+nel riquadro del podcast aperto e richiede una conferma. Tocca
+«Podcast seguiti» per aprire o richiudere l’intero elenco: la scelta
+viene ricordata e inclusa nel backup JSON.

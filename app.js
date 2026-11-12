@@ -679,6 +679,23 @@ function renderShortcuts() {
 
 const podcastCollator = new Intl.Collator('it', { sensitivity: 'base', numeric: true });
 const podcastOrder = $('podcast-order');
+const podcastList = $('following');
+const podcastListToggle = $('podcast-list-toggle');
+
+function updatePodcastListVisibility() {
+  const collapsed = state.podcastsCollapsed === true;
+  podcastList.hidden = collapsed;
+  podcastOrder.hidden = collapsed;
+  podcastListToggle.setAttribute('aria-expanded', String(!collapsed));
+}
+
+podcastListToggle.onclick = () => {
+  state.podcastsCollapsed = !podcastList.hidden;
+  updatePodcastListVisibility();
+  save();
+};
+updatePodcastListVisibility();
+
 podcastOrder.value = state.podcastOrder === 'recent' ? 'recent' : 'title';
 podcastOrder.onchange = () => {
   state.podcastOrder = podcastOrder.value;
@@ -734,7 +751,6 @@ function podcastPanelState(panel, preserveMenus) {
   return {
     open: panel.open,
     archive: panel.querySelector('.archive')?.open,
-    menu: preserveMenus && Boolean(panel.querySelector('.podcast-more[open]')),
     episodeMenus: new Set(preserveMenus
       ? [...panel.querySelectorAll('.episode-more[open]')].map(menu => menu.dataset.episodeId)
       : [])
@@ -782,10 +798,7 @@ function render(preserveMenus = false) {
     const author = document.createElement('small');
     author.textContent = show.author;
     header.append(author);
-    const menu = details('⋯', savedPanel?.menu ?? false);
-    menu.className = 'podcast-more';
-    menu.firstChild.setAttribute('aria-label', beanLocale.text('Opzioni · ') + show.title);
-    button(menu, beanLocale.text('Smetti di seguire'), () => {
+    button(header, beanLocale.text('Smetti di seguire'), () => {
       if (!confirm(beanLocale.text('Smettere di seguire «') + show.title + '»?')) return;
       state.shows = state.shows.filter(candidate => candidate !== show);
       episodeCatalogs.delete(show.feed);
@@ -795,7 +808,7 @@ function render(preserveMenus = false) {
       save();
       render();
     }, beanLocale.text('Smetti di seguire ') + show.title);
-    header.append(menu);
+    header.lastElementChild.className = 'unfollow-podcast';
     episodePanel.append(header);
 
     const episodes = new Map();
@@ -935,7 +948,10 @@ $('search').addEventListener('submit', async event => {
   }
 });
 
-$('close-results').onclick = () => { $('results-section').hidden = true; };
+$('close-results').onclick = () => {
+  $('results-section').hidden = true;
+  $('query').focus();
+};
 $('refresh').onclick = () => updateShows(true);
 
 function clock(seconds) {

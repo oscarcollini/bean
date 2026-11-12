@@ -88,7 +88,6 @@ globalThis.appLocale = (() => {
     "Non riesco a caricare le puntate precedenti. Riprova.": "Couldn’t load older episodes. Try again.",
     "Cerca un podcast e premi Segui.": "Find a podcast and tap Follow.",
     "Nuove puntate": "New episodes",
-    "Opzioni · ": "Options · ",
     "Smetti di seguire": "Unfollow",
     "Smettere di seguire «": "Unfollow «",
     "Smetti di seguire ": "Unfollow ",
@@ -124,7 +123,7 @@ globalThis.appLocale = (() => {
 
   document.documentElement.lang = language;
   if (language === 'en') {
-    document.querySelector('link[rel="manifest"]').href = "bean-en.webmanifest?v=035";
+    document.querySelector('link[rel="manifest"]').href = "bean-en.webmanifest?v=036";
     const walker = document.createTreeWalker(document.documentElement, NodeFilter.SHOW_TEXT);
     for (let node = walker.nextNode(); node; node = walker.nextNode()) {
       if (node.parentElement.closest('script, style')) continue;
