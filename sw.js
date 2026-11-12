@@ -1,6 +1,6 @@
-const CACHE = 'bean-shell-pages-32';
-const SHELL = ['./', './index.html', './style.css?v=32', './app.js?v=32', './icon.svg',
-  './icon-192.png', './icon-512.png', './bean.webmanifest?v=20'];
+const CACHE = 'bean-shell-pages-33';
+const SHELL = ['./locale.js?v=033', './bean-en.webmanifest?v=033', './', './index.html', './style.css?v=33', './app.js?v=33', './icon.svg',
+  './icon-192.png', './icon-512.png', './bean.webmanifest?v=033'];
 
 self.addEventListener('install', event => {
   event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(SHELL)).then(() => self.skipWaiting()));
@@ -20,7 +20,7 @@ self.addEventListener('fetch', event => {
     event.respondWith(fetch(event.request).catch(() => caches.match('./index.html')));
     return;
   }
-  const assets = SHELL.slice(2).map(path => new URL(path, self.registration.scope).href);
+  const assets = SHELL.map(path => new URL(path, self.registration.scope).href);
   if (assets.includes(url.href)) {
     event.respondWith(caches.match(event.request).then(cached => cached || fetch(event.request)));
   }
