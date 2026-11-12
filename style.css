@@ -270,3 +270,21 @@ body:has(#player:not([hidden]):not(.is-expanded)) main { padding-bottom: calc(6r
 }
 #listening-dialog #undo-bar { bottom: calc(.55rem + env(safe-area-inset-bottom)); }
 #undo-button { font-weight: 700; }
+
+#library-dialog {
+  width: min(32rem, calc(100% - 2rem));
+  max-height: 85dvh;
+  padding: 1rem;
+  border: 1px solid var(--line);
+  border-radius: .9rem;
+  background: var(--panel);
+  color: var(--accent);
+}
+#library-dialog::backdrop { background: #432c4c66; }
+#library-dialog h2, #library-dialog h3 { margin: 0; }
+#library-dialog h3 { font-size: 1rem; }
+#library-dialog p { margin: .45rem 0; }
+#library-dialog section { margin-top: 1rem; }
+.library-actions { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: .55rem; }
+#library-status:empty { display: none; }
+#library-status { font-weight: 650; }

@@ -3,12 +3,12 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#bef15e">
-<title>Bean</title>
-<link rel="manifest" href="bean.webmanifest?v=20">
+<title>bean!</title>
+<link rel="manifest" href="bean.webmanifest?v=035">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-192.png">
-<link rel="stylesheet" href="style.css?v=32">
-<header><img src="icon.svg" alt=""><h1>Bean</h1><button id="listening-home" type="button" hidden>Ascolto</button><button id="refresh" type="button">Aggiorna</button></header>
+<link rel="stylesheet" href="style.css?v=35">
+<header><img src="icon.svg" alt=""><h1>bean!</h1><button id="listening-home" type="button" hidden>Ascolto</button><button id="refresh" type="button">Aggiorna</button></header>
 <main>
   <form id="search"><label class="sr" for="query">Cerca un podcast</label>
     <div class="search-field">
@@ -31,14 +31,38 @@
         <option value="recent">Ultima puntata</option>
       </select>
     </div>
-    <ul id="following"></ul>
+    <ul id="following"><li role="status">Avvio di bean!…</li></ul>
   </section>
   <div id="beanInstallPanel" class="install-panel">
-    <button id="beanInstallButton" type="button">Installa Bean</button>
+    <button id="beanInstallButton" type="button">Installa bean!</button>
     <p id="beanInstallStatus" role="status"></p>
   </div>
-  <p class="colophon">Bean v0.32 · Oscar Collini fecit · <a href="https://creativecommons.org/licenses/by-sa/4.0/deed.it" target="_blank" rel="noopener">CC BY-SA 4.0</a></p>
+  <p class="colophon"><button id="library-open" type="button">Preferenze</button></p>
+  <p class="colophon">bean! v0.35 · Oscar Collini fecit · <a href="https://creativecommons.org/licenses/by-sa/4.0/deed.it" target="_blank" rel="noopener">CC BY-SA 4.0</a></p>
 </main>
+<dialog id="library-dialog" aria-labelledby="library-title">
+  <div class="heading"><h2 id="library-title">Preferenze</h2><form method="dialog"><button>Chiudi</button></form></div>
+  <section>
+    <h3>Abbonamenti · OPML</h3>
+    <p>Importa o esporta i feed. I podcast già seguiti restano nella lista.</p>
+    <div class="library-actions">
+      <button id="opml-import" type="button">Importa OPML</button>
+      <button id="opml-export" type="button">Esporta OPML</button>
+    </div>
+    <input id="opml-file" type="file" accept=".opml,.xml,text/xml,application/xml" hidden>
+  </section>
+  <section>
+    <h3>Backup completo · JSON</h3>
+    <p>Include abbonamenti, ascolti, posizione, coda, velocità e ordinamento. Il ripristino sostituisce i dati correnti.</p>
+    <div class="library-actions">
+      <button id="backup-import" type="button">Ripristina backup</button>
+      <button id="backup-export" type="button">Esporta backup</button>
+    </div>
+    <input id="backup-file" type="file" accept=".json,application/json" hidden>
+  </section>
+  <p id="library-status" role="status"></p>
+  <p><a href="archivio.html">Controlla archivio</a></p>
+</dialog>
 <dialog id="listening-dialog" aria-labelledby="listening-title">
   <div class="heading"><h2 id="listening-title">Ascolto</h2><form method="dialog"><button>Chiudi</button></form></div>
   <section aria-labelledby="queue-title"><h3 id="queue-title">Coda</h3><ul id="queue-list"></ul></section>
@@ -78,5 +102,6 @@
   <audio id="audio" preload="none"></audio>
 </footer>
 <div id="undo-bar" hidden><span id="undo-message" role="status"></span><button id="undo-button" type="button">Annulla</button></div>
-<script src="app.js?v=32" defer></script>
+<script src="locale.js?v=035"></script>
+<script src="app.js?v=35" defer></script>
 </html>

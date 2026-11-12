@@ -2,6 +2,22 @@
 
 globalThis.appLocale = (() => {
   const english = {
+    "Preferenze": "Preferences",
+    "Abbonamenti · OPML": "Subscriptions · OPML",
+    "Importa o esporta i feed. I podcast già seguiti restano nella lista.": "Import or export feeds. Existing subscriptions stay in the list.",
+    "Importa OPML": "Import OPML",
+    "Esporta OPML": "Export OPML",
+    "Backup completo · JSON": "Full backup · JSON",
+    "Include abbonamenti, ascolti, posizione, coda, velocità e ordinamento. Il ripristino sostituisce i dati correnti.": "Includes subscriptions, listening history, progress, queue, speed and sorting. Restoring replaces the current data.",
+    "Ripristina backup": "Restore backup",
+    "Esporta backup": "Export backup",
+    "Il file OPML non è valido.": "The OPML file is invalid.",
+    "Il file OPML non contiene feed utilizzabili.": "The OPML file contains no usable feeds.",
+    "Il file non è un backup di bean! compatibile.": "This file is not a compatible bean! backup.",
+    "Impossibile importare il file.": "Couldn’t import the file.",
+    "Questi podcast sono già nella lista.": "These podcasts are already in the list.",
+    "Abbonamenti aggiunti: {0}.": "Subscriptions added: {0}.",
+    "Sostituire l’archivio corrente con questo backup ({0} podcast)?": "Replace the current library with this backup ({0} podcasts)?",
     "Avvio di bean!…": "Starting bean!…",
     "Controlla archivio": "Check library",
     "Avvio interrotto. Apri «Controlla archivio» per verificare i dati salvati.": "Startup stopped. Open “Check library” to inspect the saved data.",
@@ -108,7 +124,7 @@ globalThis.appLocale = (() => {
 
   document.documentElement.lang = language;
   if (language === 'en') {
-    document.querySelector('link[rel="manifest"]').href = "bean-en.webmanifest?v=034";
+    document.querySelector('link[rel="manifest"]').href = "bean-en.webmanifest?v=035";
     const walker = document.createTreeWalker(document.documentElement, NodeFilter.SHOW_TEXT);
     for (let node = walker.nextNode(); node; node = walker.nextNode()) {
       if (node.parentElement.closest('script, style')) continue;
