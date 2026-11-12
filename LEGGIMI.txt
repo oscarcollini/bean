@@ -46,3 +46,7 @@ Nel lettore grande, il tasto ✓ archivia la puntata e avvia la prossima
 in coda. In In corso, ✓ archivia solo la puntata selezionata.
 
 Per i podcast ospitati da Spreaker, bean! prova prima la sua API pubblica.
+
+0.34 — Se la lista non compare, apri Controlla archivio in fondo alla
+pagina. Il controllo legge i dati nel profilo corrente senza modificarli.
+Aprilo dallo stesso indirizzo GitHub Pages, non come file HTML locale.

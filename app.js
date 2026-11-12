@@ -1,3 +1,10 @@
+'use strict';
+
+const beanLocale = globalThis.appLocale ?? {
+  locale: 'it-IT',
+  text: (source, ...values) => source.replace(/\{(\d+)\}/g, (_, index) => values[index])
+};
+
 (() => {
   const panel = document.getElementById('beanInstallPanel');
   const button = document.getElementById('beanInstallButton');
@@ -26,7 +33,7 @@
   button.addEventListener('click', async () => {
     const prompt = installPrompt;
     if (!prompt) {
-      status.textContent = appLocale.text('In Chrome apri il menu ⋮ e scegli «Aggiungi a schermata Home» o «Installa app», se disponibile.');
+      status.textContent = beanLocale.text('In Chrome apri il menu ⋮ e scegli «Aggiungi a schermata Home» o «Installa app», se disponibile.');
       return;
     }
     installPrompt = null;
@@ -40,14 +47,13 @@
         updatePanel();
       }
     } catch {
-      status.textContent = appLocale.text('Il browser non ha aperto la richiesta. Riprova dal menu ⋮.');
+      status.textContent = beanLocale.text('Il browser non ha aperto la richiesta. Riprova dal menu ⋮.');
     } finally {
       button.disabled = false;
     }
   });
 })();
 
-'use strict';
 
 const $ = id => document.getElementById(id);
 const audio = $('audio');
@@ -59,11 +65,16 @@ const loadingOlder = new Set();
 const interval = 30 * 60 * 1000;
 const storageKey = 'bean-library-v1';
 let state = { shows: [], current: null, rate: 1 };
+let storageReadable = true;
 try {
-  const saved = JSON.parse(localStorage.getItem(storageKey));
-  if (saved && Array.isArray(saved.shows)) state = saved;
+  const raw = localStorage.getItem(storageKey);
+  if (raw !== null) {
+    const saved = JSON.parse(raw);
+    if (!saved || !Array.isArray(saved.shows)) throw new Error('Invalid podcast library');
+    state = saved;
+  }
 } catch {
-  // An unreadable library starts empty.
+  storageReadable = false;
 }
 
 state.listening ??= {};
@@ -77,10 +88,11 @@ let lastSavedPosition = 0;
 let replayingArchived = false;
 
 function save() {
+  if (!storageReadable) return;
   try {
     localStorage.setItem(storageKey, JSON.stringify(state));
   } catch {
-    status(appLocale.text('Memoria locale piena o indisponibile.'));
+    status(beanLocale.text('Memoria locale piena o indisponibile.'));
   }
 }
 
@@ -106,10 +118,10 @@ function searchPodcasts(term) {
       if (error) reject(error);
       else resolve(data);
     }
-    const timeout = setTimeout(() => finish(new Error(appLocale.text('Catalogo non raggiungibile'))), 12000);
+    const timeout = setTimeout(() => finish(new Error(beanLocale.text('Catalogo non raggiungibile'))), 12000);
     window[callback] = data => {
       if (!Array.isArray(data?.results)) {
-        finish(new Error(appLocale.text('Risposta del catalogo non valida')));
+        finish(new Error(beanLocale.text('Risposta del catalogo non valida')));
         return;
       }
       const matches = data.results
@@ -123,7 +135,7 @@ function searchPodcasts(term) {
       finish(null, matches);
     };
     script.src = url.href;
-    script.onerror = () => finish(new Error(appLocale.text('Catalogo non raggiungibile')));
+    script.onerror = () => finish(new Error(beanLocale.text('Catalogo non raggiungibile')));
     document.head.append(script);
   });
 }
@@ -132,7 +144,7 @@ async function feedResponse(url) {
   const response = await fetch(url, {
     signal: AbortSignal.timeout(9000), credentials: 'omit', referrerPolicy: 'no-referrer'
   });
-  if (!response.ok) throw new Error(appLocale.text('Feed non raggiungibile'));
+  if (!response.ok) throw new Error(beanLocale.text('Feed non raggiungibile'));
   return response;
 }
 
@@ -147,7 +159,7 @@ function spreakerNextPage(nextUrl, currentUrl) {
 async function readSpreakerEpisodes(url) {
   const response = await feedResponse(url);
   const { response: show } = await response.json();
-  if (!Array.isArray(show?.items)) throw new Error(appLocale.text('Risposta Spreaker non valida'));
+  if (!Array.isArray(show?.items)) throw new Error(beanLocale.text('Risposta Spreaker non valida'));
   const episodes = show.items.flatMap(item => {
     const id = String(item.episode_id || '');
     const playback = item.playback_url;
@@ -157,7 +169,7 @@ async function readSpreakerEpisodes(url) {
     // Match the GUID in Spreaker's RSS so archives, progress and novelty survive.
     return [{
       id: 'https://api.spreaker.com/episode/' + id,
-      title: String(item.title || appLocale.text('Puntata')).slice(0, 300),
+      title: String(item.title || beanLocale.text('Puntata')).slice(0, 300),
       date: Date.parse(String(item.published_at || '').replace(' ', 'T') + 'Z') || 0,
       url: audio.href,
       notes: String(item.description || '').slice(0, 32000),
@@ -170,7 +182,7 @@ async function readSpreakerEpisodes(url) {
 async function readEpisodes(feed) {
   const source = new URL(feed);
   if (!['http:', 'https:'].includes(source.protocol) || source.username || source.password) {
-    throw new Error(appLocale.text('Indirizzo del feed non valido'));
+    throw new Error(beanLocale.text('Indirizzo del feed non valido'));
   }
   const spreakerId = ['www.spreaker.com', 'spreaker.com'].includes(source.hostname) &&
     source.pathname.match(/^\/show\/(\d+)\/episodes\/feed\/?$/)?.[1];
@@ -248,7 +260,7 @@ function parseFeed(bytes, baseUrl) {
   const xml = new TextDecoder(utf16 || encoding || 'utf-8').decode(bytes);
   const doc = new DOMParser().parseFromString(xml, 'application/xml');
   if (doc.querySelector('parsererror') || !['rss', 'feed', 'RDF'].includes(doc.documentElement.localName)) {
-    throw new Error(appLocale.text('Feed non valido'));
+    throw new Error(beanLocale.text('Feed non valido'));
   }
   const root = doc.documentElement;
   const channel = [...root.children].find(child => child.localName === 'channel') || root;
@@ -272,7 +284,7 @@ function parseFeed(bytes, baseUrl) {
         if (location.protocol === 'https:' && url.protocol === 'http:') url.protocol = 'https:';
         return [{
           id: (textOf(item, 'guid') || textOf(item, 'id') || url.href).slice(0, 600),
-          title: (textOf(item, 'title') || appLocale.text('Puntata')).slice(0, 300),
+          title: (textOf(item, 'title') || beanLocale.text('Puntata')).slice(0, 300),
           date: Date.parse(textOf(item, 'pubDate') || textOf(item, 'published') || textOf(item, 'updated')) || 0,
           url: url.href,
           notes: (textOf(item, 'encoded') || textOf(item, 'description') ||
@@ -414,11 +426,11 @@ function archiveWithUndo(episode, message, apply, reopenPlayer = false) {
 
 function archiveThrough(episode) {
   const show = state.shows.find(show => show.feed === episode.feed);
-  if (!show || !episode.date || !confirm(appLocale.text('Archiviare questa puntata di ') + episode.show +
-      appLocale.text(' e tutte quelle pubblicate fino alla stessa data e ora, comprese quelle che bean! caricherà in futuro?'))) return;
+  if (!show || !episode.date || !confirm(beanLocale.text('Archiviare questa puntata di ') + episode.show +
+      beanLocale.text(' e tutte quelle pubblicate fino alla stessa data e ora, comprese quelle che bean! caricherà in futuro?'))) return;
 
   if (state.current?.feed === show.feed && isBeforeArchiveCutoff(state.current, episode.date)) rememberPosition();
-  archiveWithUndo(episode, appLocale.text('Puntate archiviate'), () => {
+  archiveWithUndo(episode, beanLocale.text('Puntate archiviate'), () => {
     show.archiveThrough = Math.max(show.archiveThrough || 0, episode.date);
     for (const entry of Object.values(state.listening)) {
       if (entry.feed === show.feed && isBeforeArchiveCutoff(entry, episode.date) &&
@@ -481,7 +493,7 @@ function setListened(episode, listened) {
 function markListened(episode, listened, manual = true) {
   if (listened && manual) {
     if (state.current && episodeKey(state.current) === episodeKey(episode)) rememberPosition();
-    archiveWithUndo(episode, appLocale.text('Puntata archiviata'), () => setListened(episode, true));
+    archiveWithUndo(episode, beanLocale.text('Puntata archiviata'), () => setListened(episode, true));
   } else {
     setListened(episode, listened);
   }
@@ -545,7 +557,7 @@ function showEpisodeInfo(episode) {
   const template = document.createElement('template');
   template.innerHTML = typeof episode.notes === 'string' ? episode.notes : '';
   appendNotes(notes, template.content.childNodes, baseUrl);
-  if (!notes.textContent.trim()) notes.textContent = appLocale.text('Nessuna descrizione disponibile per questa puntata.');
+  if (!notes.textContent.trim()) notes.textContent = beanLocale.text('Nessuna descrizione disponibile per questa puntata.');
 
   const page = $('episode-page');
   const href = webLink(episode.link, episode.feed);
@@ -559,15 +571,15 @@ function showEpisodeInfo(episode) {
 function episodeRow(episode, show, menuOpen) {
   const listened = isListened(episode, show);
   const entry = state.listening[episodeKey(episode)];
-  const date = episode.date ? new Date(episode.date).toLocaleDateString(appLocale.locale) : '';
+  const date = episode.date ? new Date(episode.date).toLocaleDateString(beanLocale.locale) : '';
   const progress = entry?.position >= 1 ? 'A ' + clock(entry.position) : '';
   const isNew = state.shows.find(show => show.feed === episode.feed)?.newIds?.includes(episode.id);
-  const item = row(episode.title, [isNew ? appLocale.text('Nuova') : '', date, progress].filter(Boolean).join(' · '));
+  const item = row(episode.title, [isNew ? beanLocale.text('Nuova') : '', date, progress].filter(Boolean).join(' · '));
   item.className = 'episode';
   const labels = item.firstElementChild;
   const actions = document.createElement('div');
   actions.className = 'episode-actions';
-  const playLabel = entry?.position > 0 ? appLocale.text('Riprendi') : listened ? appLocale.text('Riascolta') : appLocale.text('Ascolta');
+  const playLabel = entry?.position > 0 ? beanLocale.text('Riprendi') : listened ? beanLocale.text('Riascolta') : beanLocale.text('Ascolta');
   const play = document.createElement('button');
   play.type = 'button';
   play.className = 'episode-play';
@@ -581,17 +593,17 @@ function episodeRow(episode, show, menuOpen) {
   text.append(...labels.childNodes);
   play.append(text, icon);
   labels.replaceWith(play);
-  const markLabel = listened ? appLocale.text('Da ascoltare') : appLocale.text('Già ascoltato');
+  const markLabel = listened ? beanLocale.text('Da ascoltare') : beanLocale.text('Già ascoltato');
   const more = details('⋯', menuOpen);
   more.dataset.episodeId = episode.id;
-  more.firstChild.setAttribute('aria-label', appLocale.text('Altre azioni · ') + episode.title);
-  button(more, appLocale.text('Info puntata'), () => showEpisodeInfo(episode), appLocale.text('Info puntata · ') + episode.title);
+  more.firstChild.setAttribute('aria-label', beanLocale.text('Altre azioni · ') + episode.title);
+  button(more, beanLocale.text('Info puntata'), () => showEpisodeInfo(episode), beanLocale.text('Info puntata · ') + episode.title);
   button(more, markLabel, () => markListened(episode, !listened),
     markLabel + ' · ' + episode.title);
   more.className = 'episode-more';
   if (!listened) {
     const queued = state.queue.some(candidate => episodeKey(candidate) === episodeKey(episode));
-    button(more, queued ? appLocale.text('Togli dalla coda') : appLocale.text('In coda'), () => {
+    button(more, queued ? beanLocale.text('Togli dalla coda') : beanLocale.text('In coda'), () => {
       if (!queued) {
         addToQueue(episode);
         return;
@@ -604,7 +616,7 @@ function episodeRow(episode, show, menuOpen) {
   if (episode.date) {
     const secondary = document.createElement('div');
     secondary.className = 'archive-action';
-    button(secondary, appLocale.text('Archivia fino a qui'), () => archiveThrough(episode));
+    button(secondary, beanLocale.text('Archivia fino a qui'), () => archiveThrough(episode));
     more.append(secondary);
   }
   actions.append(more);
@@ -630,28 +642,28 @@ function renderShortcuts() {
     .sort((a, b) => (b.touched || 0) - (a.touched || 0));
   $('listening-home').hidden = (!inProgress.length && !state.queue.length) || !player.hidden;
   $('resume-list').replaceChildren();
-  if (!inProgress.length) empty($('resume-list'), appLocale.text('Nessuna puntata da riprendere.'));
+  if (!inProgress.length) empty($('resume-list'), beanLocale.text('Nessuna puntata da riprendere.'));
   for (const episode of inProgress) {
     const item = row(episode.title, episode.show + ' · ' + clock(episode.position));
-    button(item, '▶', () => selectEpisode(episode), appLocale.text('Riprendi ') + episode.title);
-    button(item, '✓', () => markListened(episode, true), appLocale.text('Segna come ascoltato · ') + episode.title);
+    button(item, '▶', () => selectEpisode(episode), beanLocale.text('Riprendi ') + episode.title);
+    button(item, '✓', () => markListened(episode, true), beanLocale.text('Segna come ascoltato · ') + episode.title);
     $('resume-list').append(item);
   }
   $('queue-list').replaceChildren();
-  if (!state.queue.length) empty($('queue-list'), appLocale.text('La coda è vuota.'));
+  if (!state.queue.length) empty($('queue-list'), beanLocale.text('La coda è vuota.'));
   state.queue.forEach((episode, index) => {
     const item = row(episode.title, episode.show);
-    button(item, 'Play', () => selectEpisode(episode), appLocale.text('Ascolta ') + episode.title);
+    button(item, 'Play', () => selectEpisode(episode), beanLocale.text('Ascolta ') + episode.title);
     if (index > 0) button(item, '↑', () => {
       state.queue.unshift(...state.queue.splice(index, 1));
       save();
       render();
-    }, appLocale.text('Metti per prima ') + episode.title);
+    }, beanLocale.text('Metti per prima ') + episode.title);
     button(item, '×', () => {
       state.queue.splice(index, 1);
       save();
       render();
-    }, appLocale.text('Togli dalla coda ') + episode.title);
+    }, beanLocale.text('Togli dalla coda ') + episode.title);
     $('queue-list').append(item);
   });
 }
@@ -685,7 +697,7 @@ async function showOlderEpisodes(show, limits, limit, hasMoreLocally, control) {
     loadingOlder.add(show.feed);
     control.disabled = true;
     const label = control.textContent;
-    control.textContent = appLocale.text('Carico le puntate…');
+    control.textContent = beanLocale.text('Carico le puntate…');
     try {
       const page = await readSpreakerEpisodes(new URL(catalog.nextPage));
       if (episodeCatalogs.get(show.feed) !== catalog) return;
@@ -697,7 +709,7 @@ async function showOlderEpisodes(show, limits, limit, hasMoreLocally, control) {
       }
       catalog.nextPage = page.nextPage;
     } catch {
-      status(appLocale.text('Non riesco a caricare le puntate precedenti. Riprova.'));
+      status(beanLocale.text('Non riesco a caricare le puntate precedenti. Riprova.'));
       return;
     } finally {
       loadingOlder.delete(show.feed);
@@ -728,7 +740,7 @@ function render(preserveMenus = false) {
   following.replaceChildren();
 
   if (!state.shows.length) {
-    empty(following, appLocale.text('Cerca un podcast e premi Segui.'));
+    empty(following, beanLocale.text('Cerca un podcast e premi Segui.'));
     return;
   }
 
@@ -747,7 +759,7 @@ function render(preserveMenus = false) {
       dot.className = 'new-dot';
       const label = document.createElement('span');
       label.className = 'sr';
-      label.textContent = appLocale.text('Nuove puntate');
+      label.textContent = beanLocale.text('Nuove puntate');
       thumbnail.append(dot, label);
     }
     podcast.firstChild.prepend(thumbnail);
@@ -763,9 +775,9 @@ function render(preserveMenus = false) {
     header.append(author);
     const menu = details('⋯', savedPanel?.menu ?? false);
     menu.className = 'podcast-more';
-    menu.firstChild.setAttribute('aria-label', appLocale.text('Opzioni · ') + show.title);
-    button(menu, appLocale.text('Smetti di seguire'), () => {
-      if (!confirm(appLocale.text('Smettere di seguire «') + show.title + '»?')) return;
+    menu.firstChild.setAttribute('aria-label', beanLocale.text('Opzioni · ') + show.title);
+    button(menu, beanLocale.text('Smetti di seguire'), () => {
+      if (!confirm(beanLocale.text('Smettere di seguire «') + show.title + '»?')) return;
       state.shows = state.shows.filter(candidate => candidate !== show);
       episodeCatalogs.delete(show.feed);
       visibleEpisodes.delete(show.feed);
@@ -773,7 +785,7 @@ function render(preserveMenus = false) {
       state.queue = state.queue.filter(episode => episode.feed !== show.feed);
       save();
       render();
-    }, appLocale.text('Smetti di seguire ') + show.title);
+    }, beanLocale.text('Smetti di seguire ') + show.title);
     header.append(menu);
     episodePanel.append(header);
 
@@ -806,22 +818,22 @@ function render(preserveMenus = false) {
     for (const episode of archived.slice(0, archiveLimit)) {
       listened.append(episodeRow(episode, show, savedPanel?.episodeMenus.has(episode.id) ?? false));
     }
-    if (!pending.children.length) empty(pending, appLocale.text('Nessuna puntata da ascoltare.'));
+    if (!pending.children.length) empty(pending, beanLocale.text('Nessuna puntata da ascoltare.'));
     episodePanel.append(pending);
     if (remaining.length > limit || olderInPending) {
-      button(episodePanel, appLocale.text('Mostra puntate precedenti'),
+      button(episodePanel, beanLocale.text('Mostra puntate precedenti'),
         control => showOlderEpisodes(show, visibleEpisodes, limit, remaining.length > limit, control),
-        appLocale.text('Mostra puntate precedenti · ') + show.title);
+        beanLocale.text('Mostra puntate precedenti · ') + show.title);
       episodePanel.lastElementChild.className = 'older-episodes';
     }
     if (archived.length || olderInArchive) {
-      const archive = details(appLocale.text('Puntate archiviate (') + archived.length + ')', savedPanel?.archive ?? false);
+      const archive = details(beanLocale.text('Puntate archiviate (') + archived.length + ')', savedPanel?.archive ?? false);
       archive.className = 'archive';
       archive.append(listened);
       if (archived.length > archiveLimit || olderInArchive) {
-        button(archive, appLocale.text('Mostra altre puntate archiviate'),
+        button(archive, beanLocale.text('Mostra altre puntate archiviate'),
           control => showOlderEpisodes(show, visibleArchived, archiveLimit, archived.length > archiveLimit, control),
-          appLocale.text('Mostra altre puntate archiviate · ') + show.title);
+          beanLocale.text('Mostra altre puntate archiviate · ') + show.title);
         archive.lastElementChild.className = 'older-episodes';
       }
       episodePanel.append(archive);
@@ -836,12 +848,12 @@ async function updateShows(manual = false, startup = false) {
   if (refreshing) return;
   const shows = state.shows.filter(show => manual || startup || Date.now() - (show.checked || 0) >= interval);
   if (!shows.length) {
-    if (manual) status(appLocale.text('Segui un podcast per aggiornare le puntate.'));
+    if (manual) status(beanLocale.text('Segui un podcast per aggiornare le puntate.'));
     return;
   }
   refreshing = true;
   $('refresh').disabled = true;
-  if (manual) status(appLocale.text('Aggiorno le puntate…'));
+  if (manual) status(beanLocale.text('Aggiorno le puntate…'));
   let failures = 0;
   try {
     for (const show of shows) {
@@ -857,7 +869,7 @@ async function updateShows(manual = false, startup = false) {
       render(true);
     }
     if (manual || failures) {
-      status(failures ? appLocale.text("Feed non raggiungibili: {0} su {1}.", failures, shows.length) : appLocale.text('Puntate aggiornate.'));
+      status(failures ? beanLocale.text("Feed non raggiungibili: {0} su {1}.", failures, shows.length) : beanLocale.text('Puntate aggiornate.'));
     }
   } finally {
     refreshing = false;
@@ -873,21 +885,21 @@ $('search').addEventListener('submit', async event => {
   if (!q) return;
   const submit = $('search').querySelector('button');
   submit.disabled = true;
-  status(appLocale.text('Cerco nel catalogo…'));
+  status(beanLocale.text('Cerco nel catalogo…'));
   $('results-section').hidden = true;
   const results = $('results');
   results.replaceChildren();
   try {
     const matches = await searchPodcasts(q);
-    if (!matches.length) empty(results, appLocale.text('Nessun podcast trovato.'));
+    if (!matches.length) empty(results, beanLocale.text('Nessun podcast trovato.'));
     for (const match of matches) {
       const item = row(match.title, match.author);
       item.prepend(cover(match.artwork));
       const followed = state.shows.some(show => show.feed === match.feed);
-      button(item, followed ? appLocale.text('Seguito') : appLocale.text('Segui'), async control => {
+      button(item, followed ? beanLocale.text('Seguito') : beanLocale.text('Segui'), async control => {
         if (state.shows.some(show => show.feed === match.feed)) return;
         control.disabled = true;
-        status(appLocale.text('Carico le puntate…'));
+        status(beanLocale.text('Carico le puntate…'));
         try {
           const feed = await readEpisodes(match.feed);
           episodeCatalogs.set(match.feed, feed);
@@ -895,11 +907,11 @@ $('search').addEventListener('submit', async event => {
             artwork: match.artwork || feed.artwork, checked: Date.now() });
           save();
           render();
-          control.textContent = appLocale.text('Seguito');
+          control.textContent = beanLocale.text('Seguito');
           status();
         } catch {
           control.disabled = false;
-          status(appLocale.text('Non riesco a leggere il feed di questo podcast.'));
+          status(beanLocale.text('Non riesco a leggere il feed di questo podcast.'));
         }
       });
       item.querySelector('button').disabled = followed;
@@ -908,7 +920,7 @@ $('search').addEventListener('submit', async event => {
     $('results-section').hidden = false;
     status();
   } catch {
-    status(appLocale.text('Ricerca non disponibile. Riprova tra poco.'));
+    status(beanLocale.text('Ricerca non disponibile. Riprova tra poco.'));
   } finally {
     submit.disabled = false;
   }
@@ -947,7 +959,7 @@ function play() {
   if (state.current) replayingArchived = isListened(state.current);
   showAudioError();
   audio.play().catch(error => {
-    if (error.name !== 'AbortError') showAudioError(appLocale.text('Riproduzione non disponibile. Tocca Play per riprovare.'));
+    if (error.name !== 'AbortError') showAudioError(beanLocale.text('Riproduzione non disponibile. Tocca Play per riprovare.'));
   });
 }
 
@@ -1048,7 +1060,7 @@ $('info-player').onclick = () => {
 function finishCurrentEpisode() {
   if (!state.current) return;
   rememberPosition();
-  archiveWithUndo(state.current, appLocale.text('Puntata archiviata'), () => setListened(state.current, true), true);
+  archiveWithUndo(state.current, beanLocale.text('Puntata archiviata'), () => setListened(state.current, true), true);
   if (state.queue.length) {
     openEpisode(state.queue[0]);
   } else {
@@ -1096,7 +1108,7 @@ audio.addEventListener('timeupdate', () => {
 });
 for (const event of ['play', 'pause', 'ended']) {
   audio.addEventListener(event, () => {
-    $('toggle').setAttribute('aria-label', audio.paused ? appLocale.text('Riproduci') : appLocale.text('Pausa'));
+    $('toggle').setAttribute('aria-label', audio.paused ? beanLocale.text('Riproduci') : beanLocale.text('Pausa'));
     $('toggle').classList.toggle('is-playing', !audio.paused);
     if ('mediaSession' in navigator) navigator.mediaSession.playbackState = state.current ? (audio.paused ? 'paused' : 'playing') : 'none';
     if (event === 'play' && state.current) {
@@ -1124,7 +1136,7 @@ audio.addEventListener('playing', () => {
     render(true);
   }
 });
-audio.addEventListener('error', () => showAudioError(appLocale.text('Audio non disponibile per questa puntata.')));
+audio.addEventListener('error', () => showAudioError(beanLocale.text('Audio non disponibile per questa puntata.')));
 
 if ('mediaSession' in navigator) {
   const actions = {
@@ -1140,12 +1152,25 @@ if ('mediaSession' in navigator) {
   }
 }
 
-render();
-if (state.current) openEpisode(state.current, false);
-updateShows(false, true);
-setInterval(() => { if (!document.hidden) updateShows(); }, interval);
-document.addEventListener('visibilitychange', () => {
-  if (document.hidden) rememberPosition();
-  else updateShows();
-});
+function start() {
+  if (!storageReadable) throw new Error('Unreadable podcast library');
+  render();
+  if (state.current) openEpisode(state.current, false);
+  updateShows(false, true);
+  setInterval(() => { if (!document.hidden) updateShows(); }, interval);
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) rememberPosition();
+    else updateShows();
+  });
+}
+
+try {
+  start();
+} catch (error) {
+  console.error(error);
+  $('query').disabled = true;
+  $('search').querySelector('button').disabled = true;
+  $('refresh').disabled = true;
+  status(beanLocale.text('Avvio interrotto. Apri «Controlla archivio» per verificare i dati salvati.'));
+}
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(console.warn);

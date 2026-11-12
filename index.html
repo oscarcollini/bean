@@ -4,10 +4,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#bef15e">
 <title>bean!</title>
-<link rel="manifest" href="bean.webmanifest?v=033">
+<link rel="manifest" href="bean.webmanifest?v=034">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-192.png">
-<link rel="stylesheet" href="style.css?v=33">
+<link rel="stylesheet" href="style.css?v=34">
 <header><img src="icon.svg" alt=""><h1>bean!</h1><button id="listening-home" type="button" hidden>Ascolto</button><button id="refresh" type="button">Aggiorna</button></header>
 <main>
   <form id="search"><label class="sr" for="query">Cerca un podcast</label>
@@ -31,13 +31,14 @@
         <option value="recent">Ultima puntata</option>
       </select>
     </div>
-    <ul id="following"></ul>
+    <ul id="following"><li role="status">Avvio di bean!…</li></ul>
   </section>
   <div id="beanInstallPanel" class="install-panel">
     <button id="beanInstallButton" type="button">Installa bean!</button>
     <p id="beanInstallStatus" role="status"></p>
   </div>
-  <p class="colophon">bean! v0.33 · Oscar Collini fecit · <a href="https://creativecommons.org/licenses/by-sa/4.0/deed.it" target="_blank" rel="noopener">CC BY-SA 4.0</a></p>
+  <p class="colophon"><a href="archivio.html">Controlla archivio</a></p>
+  <p class="colophon">bean! v0.34 · Oscar Collini fecit · <a href="https://creativecommons.org/licenses/by-sa/4.0/deed.it" target="_blank" rel="noopener">CC BY-SA 4.0</a></p>
 </main>
 <dialog id="listening-dialog" aria-labelledby="listening-title">
   <div class="heading"><h2 id="listening-title">Ascolto</h2><form method="dialog"><button>Chiudi</button></form></div>
@@ -78,6 +79,6 @@
   <audio id="audio" preload="none"></audio>
 </footer>
 <div id="undo-bar" hidden><span id="undo-message" role="status"></span><button id="undo-button" type="button">Annulla</button></div>
-<script src="locale.js?v=033"></script>
-<script src="app.js?v=33" defer></script>
+<script src="locale.js?v=034"></script>
+<script src="app.js?v=34" defer></script>
 </html>

@@ -1,6 +1,6 @@
-const CACHE = 'bean-shell-pages-33';
-const SHELL = ['./locale.js?v=033', './bean-en.webmanifest?v=033', './', './index.html', './style.css?v=33', './app.js?v=33', './icon.svg',
-  './icon-192.png', './icon-512.png', './bean.webmanifest?v=033'];
+const CACHE = 'bean-shell-pages-34';
+const SHELL = ['./locale.js?v=034', './bean-en.webmanifest?v=034', './', './index.html', './archivio.html', './style.css?v=34', './app.js?v=34', './icon.svg',
+  './icon-192.png', './icon-512.png', './bean.webmanifest?v=034'];
 
 self.addEventListener('install', event => {
   event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(SHELL)).then(() => self.skipWaiting()));
@@ -17,7 +17,10 @@ self.addEventListener('fetch', event => {
   const scope = new URL(self.registration.scope);
   if (event.request.method !== 'GET' || url.origin !== scope.origin || !url.pathname.startsWith(scope.pathname)) return;
   if (event.request.mode === 'navigate') {
-    event.respondWith(fetch(event.request).catch(() => caches.match('./index.html')));
+    const fallback = url.pathname === new URL('./archivio.html', scope).pathname
+      ? './archivio.html'
+      : './index.html';
+    event.respondWith(fetch(event.request).catch(() => caches.match(fallback)));
     return;
   }
   const assets = SHELL.map(path => new URL(path, self.registration.scope).href);

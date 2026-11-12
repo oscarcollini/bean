@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="it">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>bean! · Archivio</title>
+<style>
+  body { margin: 1rem auto; max-width: 32rem; padding: 0 1rem; background: #eef5df; color: #432c4c; font: 1rem/1.5 system-ui,sans-serif; }
+  a { color: inherit; }
+  button { font: inherit; padding: .6rem 1rem; background: #bef15e; border: 1px solid currentColor; border-radius: .5rem; cursor: pointer; }
+</style>
+<main>
+  <h1 id="title">Archivio di bean!</h1>
+  <p id="result" role="status">Controllo dell’archivio…</p>
+  <button id="download" type="button" hidden>Scarica una copia</button>
+  <p><a id="back" href="./">Torna a bean!</a></p>
+</main>
+<script>
+'use strict';
+const it = /^it(?:-|$)/i.test(navigator.language || 'it');
+document.documentElement.lang = it ? 'it' : 'en';
+const result = document.getElementById('result');
+const download = document.getElementById('download');
+if (!it) {
+  document.getElementById('title').textContent = 'bean! library';
+  document.getElementById('back').textContent = 'Back to bean!';
+  download.textContent = 'Download a copy';
+}
+try {
+  const raw = localStorage.getItem('bean-library-v1');
+  if (raw === null) {
+    result.textContent = it ? 'Nessun archivio bean! trovato in questo profilo.' : 'No bean! library was found in this profile.';
+  } else {
+    let valid = false;
+    try {
+      const data = JSON.parse(raw);
+      if (Array.isArray(data?.shows)) {
+        const count = data.shows.length;
+        result.textContent = it ? 'Podcast seguiti salvati: ' + count + '.' : 'Saved subscriptions: ' + count + '.';
+        valid = true;
+      }
+    } catch {
+      // The original bytes can still be downloaded.
+    }
+    if (!valid) result.textContent = it
+      ? 'L’archivio esiste, ma il formato non è leggibile. Puoi scaricarne una copia.'
+      : 'The library exists, but its format is unreadable. You can download a copy.';
+    download.hidden = false;
+    download.addEventListener('click', () => {
+      const url = URL.createObjectURL(new Blob([raw], {type: valid ? 'application/json' : 'text/plain'}));
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = valid ? 'bean-archivio.json' : 'bean-archivio.txt';
+      link.click();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    });
+  }
+} catch {
+  result.textContent = it ? 'Questo profilo non consente di leggere l’archivio locale.' : 'This profile does not allow access to local storage.';
+}
+</script>
+</html>

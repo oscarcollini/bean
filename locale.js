@@ -2,6 +2,9 @@
 
 globalThis.appLocale = (() => {
   const english = {
+    "Avvio di bean!…": "Starting bean!…",
+    "Controlla archivio": "Check library",
+    "Avvio interrotto. Apri «Controlla archivio» per verificare i dati salvati.": "Startup stopped. Open “Check library” to inspect the saved data.",
     "Cerca": "Search",
     "Chiudi": "Close",
     "Installa": "Install",
@@ -105,7 +108,7 @@ globalThis.appLocale = (() => {
 
   document.documentElement.lang = language;
   if (language === 'en') {
-    document.querySelector('link[rel="manifest"]').href = "bean-en.webmanifest?v=033";
+    document.querySelector('link[rel="manifest"]').href = "bean-en.webmanifest?v=034";
     const walker = document.createTreeWalker(document.documentElement, NodeFilter.SHOW_TEXT);
     for (let node = walker.nextNode(); node; node = walker.nextNode()) {
       if (node.parentElement.closest('script, style')) continue;
